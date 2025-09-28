@@ -1,0 +1,111 @@
+2025-09-26 20:04:47  INFO: Operating system name: Mac OS X version: 15.4.1 architecture: x86_64
+2025-09-26 20:04:47  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Homebrew version: 17.0.16+0
+2025-09-26 20:04:47  INFO: Memory limit heap: 4096mb non-heap: 0mb
+2025-09-26 20:04:47  INFO: Character encoding: UTF-8
+2025-09-26 20:04:47  INFO: Version: 6.10.0
+2025-09-26 20:04:47  INFO: Starting server...
+2025-09-26 20:04:48  INFO: HikariPool-1 - Starting...
+2025-09-26 20:04:48  INFO: HikariPool-1 - Added connection conn0: url=jdbc:h2:./target/database user=SA
+2025-09-26 20:04:48  INFO: HikariPool-1 - Start completed.
+2025-09-26 20:04:48  INFO: Set default schema name to PUBLIC
+2025-09-26 20:04:49  INFO: Successfully acquired change log lock
+2025-09-26 20:04:49  INFO: Clearing database change log checksums for database h2
+2025-09-26 20:04:49  INFO: Successfully released change log lock
+2025-09-26 20:04:49  INFO: Command execution complete
+2025-09-26 20:04:49  INFO: Reading from PUBLIC.DATABASECHANGELOG
+2025-09-26 20:04:50  INFO: Reading from PUBLIC.DATABASECHANGELOG
+Database is up to date, no changesets to execute
+2025-09-26 20:04:50  INFO: Reading from PUBLIC.DATABASECHANGELOG
+
+UPDATE SUMMARY
+Run:                          0
+Previously run:              28
+Filtered out:                 0
+-------------------------------
+Total change sets:           28
+
+2025-09-26 20:04:50  INFO: UPDATE SUMMARY
+2025-09-26 20:04:50  INFO: Run:                          0
+2025-09-26 20:04:50  INFO: Previously run:              28
+2025-09-26 20:04:50  INFO: Filtered out:                 0
+2025-09-26 20:04:50  INFO: -------------------------------
+2025-09-26 20:04:50  INFO: Total change sets:           28
+2025-09-26 20:04:50  INFO: Update summary generated
+2025-09-26 20:04:50  INFO: Command execution complete
+2025-09-26 20:04:51  INFO: jetty-12.1.1; built: 2025-09-08T04:29:45.457Z; git: b7068950f9afa5f1df80e46053eda1d982895b03; jvm 17.0.16+0
+2025-09-26 20:04:51  INFO: Session workerName=node0
+2025-09-26 20:04:51  INFO: Started oeje10s.ServletContextHandler@63e70bf9{ROOT,/,b=file:///Users/dezhi/Documents/Myproject/traccar-server-java/traccar-web/simple/,a=AVAILABLE,h=oeje10s.SessionHandler@402a69f{STARTED}}
+2025-09-26 20:04:52  INFO: Started oeje10s.ServletContextHandler@63e70bf9{ROOT,/,b=file:///Users/dezhi/Documents/Myproject/traccar-server-java/traccar-web/simple/,a=AVAILABLE,h=oeje10s.SessionHandler@402a69f{STARTED}}
+2025-09-26 20:04:52  INFO: Started oejs.ServerConnector@1826475{HTTP/1.1, (http/1.1)}{0.0.0.0:8082}
+2025-09-26 20:04:52  INFO: Started oejs.Server@593f7d2e{STARTING}[12.1.1,sto=0] @5841ms
+2025-09-26 22:27:51  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s25ms).
+2025-09-26 22:34:11  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s19ms).
+2025-09-26 22:37:13  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m2s27ms).
+2025-09-26 23:56:36  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s19ms).
+2025-09-27 00:21:36  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s57ms).
+2025-09-27 00:23:22  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s28ms).
+2025-09-27 00:29:40  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s136ms).
+2025-09-27 00:43:48  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s24ms).
+2025-09-27 00:48:13  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s28ms).
+2025-09-27 01:35:58  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s17ms).
+2025-09-27 01:40:23  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s26ms).
+2025-09-27 01:42:10  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=47s15ms).
+2025-09-27 01:43:26  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s30ms).
+2025-09-27 01:50:45  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s28ms).
+2025-09-27 01:58:34  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s16ms).
+2025-09-27 02:25:14  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s28ms).
+2025-09-27 02:29:32  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s683ms).
+2025-09-27 02:47:26  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s552ms).
+2025-09-27 03:37:16  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s28ms).
+2025-09-27 03:58:10  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s15ms).
+2025-09-27 04:06:15  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=54s27ms).
+2025-09-27 04:48:14  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s23ms).
+2025-09-27 05:14:56  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s21ms).
+2025-09-27 05:38:48  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s31ms).
+2025-09-27 05:44:36  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m10s32ms).
+2025-09-27 06:15:32  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s24ms).
+2025-09-27 06:55:44  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s32ms).
+2025-09-27 07:20:33  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=54s31ms).
+2025-09-27 07:31:06  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=54s29ms).
+2025-09-27 07:41:09  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s29ms).
+2025-09-27 08:10:17  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s27ms).
+2025-09-27 08:17:35  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s21ms).
+2025-09-27 08:27:02  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s22ms).
+2025-09-27 08:54:57  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s31ms).
+2025-09-27 08:57:44  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s26ms).
+2025-09-27 10:31:39  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=28m17s475ms).
+2025-09-27 11:05:49  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=8m39s479ms).
+2025-09-27 11:19:46  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=6m26s561ms).
+2025-09-27 11:41:42  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=10m56s241ms).
+2025-09-27 11:52:25  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=7m43s297ms).
+2025-09-27 12:01:12  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=8m46s961ms).
+2025-09-27 12:02:06  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=54s32ms).
+2025-09-27 12:05:17  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=45s187ms).
+2025-09-27 12:11:00  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=54s22ms).
+2025-09-27 12:24:11  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=45s186ms).
+2025-09-27 12:39:26  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=54s973ms).
+2025-09-27 12:41:52  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s36ms).
+2025-09-27 12:50:12  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s29ms).
+2025-09-27 12:53:16  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s49ms).
+2025-09-27 12:58:47  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=49s996ms).
+2025-09-27 13:00:45  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=45s187ms).
+2025-09-27 13:08:23  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m18s30ms).
+2025-09-27 13:18:58  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=48s186ms).
+2025-09-27 13:23:17  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=54s36ms).
+2025-09-27 13:24:39  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=45s88ms).
+2025-09-27 13:26:04  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=49s397ms).
+2025-09-27 13:33:53  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=49s70ms).
+2025-09-27 13:39:24  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s33ms).
+2025-09-27 13:40:17  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=53s162ms).
+2025-09-27 14:21:19  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=36m32s725ms).
+2025-09-27 15:28:07  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s296ms).
+2025-09-27 15:29:41  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m2s42ms).
+2025-09-27 15:38:36  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=54s46ms).
+2025-09-27 15:48:19  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=48s757ms).
+2025-09-27 15:52:27  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=45s999ms).
+2025-09-27 16:06:44  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s23ms).
+2025-09-27 16:08:08  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s25ms).
+2025-09-27 16:09:01  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=52s455ms).
+2025-09-27 16:13:22  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s154ms).
+2025-09-27 20:01:35  WARN: HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=3h47m8s553ms).
+2025-09-28 00:03:14  INFO: Stopping server...

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd"
+        logicalFilePath="changelog-6.10.0">
+
+  <changeSet author="author" id="changelog-6.10.0">
+
+    <createTable tableName="tc_expenses">
+      <column name="id" type="INT" autoIncrement="true">
+        <constraints primaryKey="true" />
+      </column>
+      <column name="deviceid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="type" type="VARCHAR(32)">
+        <constraints nullable="false" />
+      </column>
+      <column name="amount" type="DECIMAL(10,2)">
+        <constraints nullable="false" />
+      </column>
+      <column name="currency" type="VARCHAR(8)" defaultValue="CNY">
+        <constraints nullable="false" />
+      </column>
+      <column name="description" type="VARCHAR(500)" />
+      <column name="expensedate" type="TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="receiptimagepath" type="VARCHAR(500)" />
+      <column name="mileage" type="DOUBLE" />
+      <column name="location" type="VARCHAR(200)" />
+      <column name="notes" type="VARCHAR(1000)" />
+      <column name="createdtime" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="modifiedtime" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="createdbyuserid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="attributes" type="VARCHAR(4000)" />
+    </createTable>
+
+    <addForeignKeyConstraint 
+        baseTableName="tc_expenses" 
+        baseColumnNames="deviceid" 
+        constraintName="fk_expenses_deviceid" 
+        onDelete="CASCADE" 
+        referencedColumnNames="id" 
+        referencedTableName="tc_devices" />
+
+    <addForeignKeyConstraint 
+        baseTableName="tc_expenses" 
+        baseColumnNames="createdbyuserid" 
+        constraintName="fk_expenses_createdbyuserid" 
+        onDelete="CASCADE" 
+        referencedColumnNames="id" 
+        referencedTableName="tc_users" />
+
+    <createIndex tableName="tc_expenses" indexName="idx_expenses_deviceid">
+      <column name="deviceid" />
+    </createIndex>
+
+    <createIndex tableName="tc_expenses" indexName="idx_expenses_expensedate">
+      <column name="expensedate" />
+    </createIndex>
+
+    <createIndex tableName="tc_expenses" indexName="idx_expenses_createdbyuserid">
+      <column name="createdbyuserid" />
+    </createIndex>
+
+  </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Traccar GPS Tracking</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px;
+            text-align: center;
+        }
+        .info-box {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .api-link {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚗 Traccar GPS Tracking Server</h1>
+    <div class="info-box">
+        <h2>服务器运行正常!</h2>
+        <p>Traccar GPS追踪服务器已成功启动并运行在您的Mac上。</p>
+        <p>版本: 6.10.0</p>
+        <p>数据库: H2 (内嵌式)</p>
+    </div>
+    
+    <div class="info-box">
+        <h3>API接口</h3>
+        <p>REST API可通过以下地址访问:</p>
+        <a href="/api/server" class="api-link">服务器信息</a>
+        <a href="/api/devices" class="api-link">设备列表</a>
+        <a href="/api/positions" class="api-link">位置数据</a>
+    </div>
+    
+    <div class="info-box">
+        <h3>开发说明</h3>
+        <p>这是一个简化的演示页面。</p>
+        <p>完整的Web界面通常需要独立的前端项目。</p>
+        <p>您可以通过REST API进行所有操作。</p>
+    </div>
+</body>
+</html>

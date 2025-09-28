@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Traccar API Tester</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            max-width: 1200px; 
+            margin: 20px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .api-section {
+            margin: 25px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .api-button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .api-button:hover {
+            background: #0056b3;
+        }
+        .response-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .method-get { border-left: 4px solid #28a745; }
+        .method-post { border-left: 4px solid #007bff; }
+        .method-put { border-left: 4px solid #ffc107; }
+        .method-delete { border-left: 4px solid #dc3545; }
+        
+        h1 { color: #333; text-align: center; }
+        h3 { color: #495057; margin-bottom: 10px; }
+        .endpoint { 
+            font-family: 'Courier New', monospace; 
+            background: #e9ecef; 
+            padding: 5px 10px; 
+            border-radius: 3px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .auth-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 Traccar API 测试工具</h1>
+        
+        <div class="auth-info">
+            <h3>⚠️ 认证说明</h3>
+            <p><strong>注意:</strong> 大部分API需要认证。首次使用需要:</p>
+            <ol>
+                <li>先注册一个管理员用户 (通过 POST /api/users)</li>
+                <li>使用用户名密码登录获得会话</li>
+                <li>或使用Basic Authentication</li>
+            </ol>
+        </div>
+
+        <!-- 服务器信息 -->
+        <div class="api-section method-get">
+            <h3>📊 服务器信息</h3>
+            <div class="endpoint">GET /api/server</div>
+            <p>获取服务器基本信息和配置</p>
+            <button class="api-button" onclick="testAPI('/api/server', 'GET')">测试</button>
+            <div id="response-server" class="response-area" style="display:none;"></div>
+        </div>
+
+        <!-- 会话管理 -->
+        <div class="api-section method-post">
+            <h3>🔐 会话管理</h3>
+            <div class="endpoint">POST /api/session</div>
+            <p>用户登录 (需要用户名和密码)</p>
+            <button class="api-button" onclick="testLogin()">测试登录</button>
+            <div class="endpoint">GET /api/session</div>
+            <p>获取当前会话信息</p>
+            <button class="api-button" onclick="testAPI('/api/session', 'GET')">获取会话</button>
+            <div class="endpoint">DELETE /api/session</div>
+            <p>用户登出</p>
+            <button class="api-button" onclick="testAPI('/api/session', 'DELETE')">登出</button>
+            <div id="response-session" class="response-area" style="display:none;"></div>
+        </div>
+
+        <!-- 用户管理 -->
+        <div class="api-section method-get">
+            <h3>👥 用户管理</h3>
+            <div class="endpoint">GET /api/users</div>
+            <p>获取用户列表 (需要管理员权限)</p>
+            <button class="api-button" onclick="testAPI('/api/users', 'GET')">获取用户</button>
+            <div class="endpoint">POST /api/users</div>
+            <p>创建新用户</p>
+            <button class="api-button" onclick="createTestUser()">创建测试用户</button>
+            <div id="response-users" class="response-area" style="display:none;"></div>
+        </div>
+
+        <!-- 设备管理 -->
+        <div class="api-section method-get">
+            <h3>📱 设备管理</h3>
+            <div class="endpoint">GET /api/devices</div>
+            <p>获取设备列表</p>
+            <button class="api-button" onclick="testAPI('/api/devices', 'GET')">获取设备</button>
+            <div class="endpoint">POST /api/devices</div>
+            <p>添加新设备</p>
+            <button class="api-button" onclick="createTestDevice()">创建测试设备</button>
+            <div id="response-devices" class="response-area" style="display:none;"></div>
+        </div>
+
+        <!-- 位置数据 -->
+        <div class="api-section method-get">
+            <h3>📍 位置数据</h3>
+            <div class="endpoint">GET /api/positions</div>
+            <p>获取位置数据</p>
+            <button class="api-button" onclick="testAPI('/api/positions', 'GET')">获取位置</button>
+            <div id="response-positions" class="response-area" style="display:none;"></div>
+        </div>
+
+        <!-- 事件数据 -->
+        <div class="api-section method-get">
+            <h3>📋 事件数据</h3>
+            <div class="endpoint">GET /api/events</div>
+            <p>获取事件列表</p>
+            <button class="api-button" onclick="testAPI('/api/events', 'GET')">获取事件</button>
+            <div id="response-events" class="response-area" style="display:none;"></div>
+        </div>
+
+        <!-- 费用管理 -->
+        <div class="api-section method-get">
+            <h3>💰 费用管理</h3>
+            <div class="endpoint">GET /api/expenses</div>
+            <p>获取费用记录列表</p>
+            <button class="api-button" onclick="testAPI('/api/expenses', 'GET')">获取费用记录</button>
+            <div class="endpoint">POST /api/expenses</div>
+            <p>创建费用记录</p>
+            <button class="api-button" onclick="createTestExpense()">创建测试费用</button>
+            <div id="response-expenses" class="response-area" style="display:none;"></div>
+        </div>
+
+        <div class="auth-info">
+            <h3>🔧 开发工具推荐</h3>
+            <p>对于更高级的API测试，推荐使用:</p>
+            <ul>
+                <li><strong>Postman:</strong> 功能强大的API测试工具</li>
+                <li><strong>Insomnia:</strong> 轻量级的REST客户端</li>
+                <li><strong>VS Code REST Client:</strong> VS Code插件</li>
+                <li><strong>curl命令:</strong> 命令行工具</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function testAPI(endpoint, method = 'GET', body = null) {
+            const responseId = 'response-' + endpoint.split('/')[2];
+            const responseDiv = document.getElementById(responseId);
+            
+            try {
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = '⏳ 请求中...';
+                
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include' // 包含cookies用于会话管理
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(`http://localhost:8082${endpoint}`, options);
+                const data = await response.text();
+                
+                let jsonData;
+                try {
+                    jsonData = JSON.parse(data);
+                    responseDiv.innerHTML = `
+                        <strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                        <strong>Response:</strong><br>
+                        <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+                    `;
+                } catch (e) {
+                    responseDiv.innerHTML = `
+                        <strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                        <strong>Response:</strong><br>
+                        <pre>${data}</pre>
+                    `;
+                }
+            } catch (error) {
+                responseDiv.innerHTML = `
+                    <strong>❌ 错误:</strong> ${error.message}<br>
+                    <small>请确保Traccar服务器正在运行在 http://localhost:8082</small>
+                `;
+            }
+        }
+
+        async function testLogin() {
+            const email = prompt('请输入邮箱:', 'admin@admin.com');
+            const password = prompt('请输入密码:', 'admin');
+            
+            if (email && password) {
+                await testAPI('/api/session', 'POST', {
+                    email: email,
+                    password: password
+                });
+            }
+        }
+
+        async function createTestUser() {
+            // 首先检查是否已有用户
+            try {
+                const response = await fetch('http://localhost:8082/api/users', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                
+                if (response.status === 401) {
+                    // 没有认证，尝试创建第一个用户（无需认证）
+                    const userData = {
+                        name: 'Administrator',
+                        email: 'admin@admin.com',
+                        password: 'admin'
+                        // 注意：不设置administrator: true，让系统自动设置
+                    };
+                    
+                    await testAPI('/api/users', 'POST', userData);
+                } else {
+                    document.getElementById('response-users').innerHTML = `
+                        <strong>ℹ️ 提示:</strong> 用户已存在，请先登录后再创建新用户
+                    `;
+                    document.getElementById('response-users').style.display = 'block';
+                }
+            } catch (error) {
+                // 如果出错，尝试直接创建
+                const userData = {
+                    name: 'Administrator',
+                    email: 'admin@admin.com',
+                    password: 'admin'
+                };
+                
+                await testAPI('/api/users', 'POST', userData);
+            }
+        }
+
+        async function createTestDevice() {
+            const deviceData = {
+                name: 'Test Device',
+                uniqueId: 'test123456',
+                category: 'default'
+            };
+            
+            await testAPI('/api/devices', 'POST', deviceData);
+        }
+
+        async function createTestExpense() {
+            const expenseData = {
+                deviceId: 1,
+                type: 'fuel',
+                amount: 350.50,
+                currency: 'CNY',
+                description: '测试费用记录 - 加油费',
+                expenseDate: new Date().toISOString(),
+                mileage: 12345.6,
+                location: '北京市朝阳区',
+                notes: '这是一个测试费用记录'
+            };
+            
+            await testAPI('/api/expenses', 'POST', expenseData);
+        }
+
+        // 页面加载时自动测试服务器连接
+        window.onload = function() {
+            setTimeout(() => {
+                testAPI('/api/server', 'GET');
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
