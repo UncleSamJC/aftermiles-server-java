@@ -774,6 +774,22 @@ public final class Keys {
             "./media");
 
     /**
+     * Maximum file size limit for expense receipt uploads in bytes. Default is 5MB.
+     */
+    public static final ConfigKey<Integer> EXPENSE_FILE_SIZE_LIMIT = new IntegerConfigKey(
+            "expense.fileSizeLimit",
+            List.of(KeyType.CONFIG),
+            5 * 1024 * 1024);
+
+    /**
+     * Allowed image MIME types for expense receipt uploads. Comma-separated list.
+     */
+    public static final ConfigKey<String> EXPENSE_ALLOWED_TYPES = new StringConfigKey(
+            "expense.allowedTypes",
+            List.of(KeyType.CONFIG),
+            "image/jpeg,image/png,image/jpg");
+
+    /**
      * Optional parameter to specify network interface for web interface to bind to. By default server will bind to all
      * available interfaces.
      */

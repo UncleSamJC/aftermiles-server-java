@@ -24,10 +24,15 @@ import java.util.Date;
 public class Expense extends ExtendedModel {
 
     public static final String TYPE_FUEL = "fuel";
-    public static final String TYPE_REPAIR = "repair";
     public static final String TYPE_INSURANCE = "insurance";
     public static final String TYPE_MAINTENANCE = "maintenance";
-    public static final String TYPE_OTHER = "other";
+    public static final String TYPE_PARKING = "parking";
+    public static final String TYPE_TOLL = "toll";
+    public static final String TYPE_CARWASH = "carwash";
+    public static final String TYPE_MOBILE = "mobile";
+    public static final String TYPE_LEGAL = "legal";
+    public static final String TYPE_SUPPLIES = "supplies";
+    public static final String TYPE_OTHERS = "others";
 
     private long deviceId;
 
@@ -127,6 +132,26 @@ public class Expense extends ExtendedModel {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    private String merchant;
+
+    public String getMerchant() {
+        return merchant;
+    }
+
+    public void setMerchant(String merchant) {
+        this.merchant = merchant;
+    }
+
+    private String tags;
+
+    public String getTags() {
+        return tags;
+    }
+
+    public void setTags(String tags) {
+        this.tags = tags;
     }
 
     private Date createdTime;
