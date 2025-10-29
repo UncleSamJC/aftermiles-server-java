@@ -100,7 +100,8 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
             @QueryParam("deviceId") long deviceId,
             @QueryParam("from") Date from,
             @QueryParam("to") Date to,
-            @QueryParam("type") String type) throws StorageException {
+            @QueryParam("type") String type,
+            @QueryParam("limit") Integer limit) throws StorageException {
 
         var conditions = new LinkedList<Condition>();
 
@@ -128,7 +129,7 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
         return storage.getObjectsStream(baseClass, new Request(
                 new Columns.All(),
                 Condition.merge(conditions),
-                new Order("expenseDate", true, 0)));
+                new Order("expenseDate", true, limit != null ? limit : 0)));
     }
 
     @POST

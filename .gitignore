@@ -12,3 +12,5 @@ out
 build
 .vscode
 bin
+deploy/
+deploy.zip

@@ -141,3 +141,110 @@ receipt: [JPEG file - receipt-carwash-003.jpg]
 | FILE_TOO_LARGE | 文件大小超过限制 |
 | INVALID_FILE_TYPE | 文件类型不支持 |
 | FUTURE_DATE_ERROR | 日期不能晚于当前日期 |
+
+
+
+
+
+
+## 补充修改 - 2025-10-25
+
+### 查询费用列表接口增强
+
+**需求背景**：前端需要在 Overview 页面显示最近10条费用记录，需要后端支持限制返回条数和排序功能。
+
+#### 接口修改详情
+
+**接口路径**: `GET /api/expenses`
+
+**新增查询参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| limit | number | 否 | 限制返回的记录条数，默认返回所有记录 |
+| offset | number | 否 | 分页偏移量，默认为0（为未来分页功能预留）|
+| deviceId | number | 否 | 按设备ID筛选（现有参数，保持不变）|
+| from | string | 否 | 起始日期 YYYY-MM-DD（现有参数，保持不变）|
+| to | string | 否 | 结束日期 YYYY-MM-DD（现有参数，保持不变）|
+| category | string | 否 | 按分类筛选（现有参数，保持不变）|
+
+**排序要求**:
+- 默认按 `date` 字段降序排列（最新的记录在前）
+- 如果日期相同，按 `id` 降序排列
+
+#### 请求示例
+
+```bash
+# 获取最近10条费用记录
+GET /api/expenses?limit=10
+
+# 获取某设备的最近5条记录
+GET /api/expenses?deviceId=123&limit=5
+
+# 获取最近20条fuel类型的记录
+GET /api/expenses?category=fuel&limit=20
+```
+
+#### 响应格式
+
+响应应该是一个**数组**，而不是包装在对象中：
+
+```json
+[
+  {
+    "id": 456,
+    "deviceId": 1,
+    "category": "fuel",
+    "amount": 65.50,
+    "currency": "CAD",
+    "merchant": "Shell Gas Station",
+    "date": "2024-01-20",
+    "receiptImagePath": "device123456/receipt_1700000000000.jpg",
+    "notes": "Regular gasoline, full tank",
+    "tags": "business,highway",
+    "createdAt": "2024-01-20T10:30:00Z"
+  },
+  {
+    "id": 455,
+    "deviceId": 2,
+    "category": "parking",
+    "amount": 12.00,
+    "currency": "CAD",
+    "merchant": "Downtown Parking",
+    "date": "2024-01-19",
+    "receiptImagePath": "device789/receipt_1699999999999.jpg",
+    "notes": "3 hours",
+    "tags": "business",
+    "createdAt": "2024-01-19T15:20:00Z"
+  }
+]
+```
+
+**注意**：
+- 不要包含 `receiptUrl` 字段，前端会自己构造
+- `receiptImagePath` 用于后端内部文件访问
+- 如果没有数据，返回空数组 `[]`
+
+
+#### SQL示例（参考）
+
+```sql
+SELECT * FROM tc_expenses
+WHERE userId = ?
+  AND (deviceId = ? OR ? IS NULL)
+  AND (date >= ? OR ? IS NULL)
+  AND (date <= ? OR ? IS NULL)
+  AND (category = ? OR ? IS NULL)
+ORDER BY date DESC, id DESC
+LIMIT ?
+OFFSET ?;
+```
+
+#### 测试场景
+
+1. **无参数查询**：返回所有记录，按日期降序
+2. **limit=10**：只返回最近10条记录
+3. **limit=10&deviceId=123**：返回设备123的最近10条记录
+4. **limit=5&category=fuel**：返回最近5条fuel类型记录
+5. **空数据**：返回空数组 `[]`
+6. **权限验证**：用户只能看到自己有权限的设备的费用记录
