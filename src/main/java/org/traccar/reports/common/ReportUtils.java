@@ -182,9 +182,14 @@ public class ReportUtils {
         trip.setStartLat(startTrip.getLatitude());
         trip.setStartLon(startTrip.getLongitude());
         trip.setStartTime(startTrip.getFixTime());
-        String startAddress = startTrip.getAddress();
-        if (startAddress == null && geocoder != null && config.getBoolean(Keys.GEOCODER_ON_REQUEST)) {
+        String startAddress = null;
+        // Force use Here API when onRequest is enabled (ignore old Plus Codes in database)
+        if (geocoder != null && config.getBoolean(Keys.GEOCODER_ON_REQUEST)) {
             startAddress = geocoder.getAddress(startTrip.getLatitude(), startTrip.getLongitude(), null);
+        }
+        // Fallback to database address only if geocoder fails
+        if (startAddress == null) {
+            startAddress = startTrip.getAddress();
         }
         trip.setStartAddress(startAddress);
 
@@ -192,9 +197,14 @@ public class ReportUtils {
         trip.setEndLat(endTrip.getLatitude());
         trip.setEndLon(endTrip.getLongitude());
         trip.setEndTime(endTrip.getFixTime());
-        String endAddress = endTrip.getAddress();
-        if (endAddress == null && geocoder != null && config.getBoolean(Keys.GEOCODER_ON_REQUEST)) {
+        String endAddress = null;
+        // Force use Here API when onRequest is enabled (ignore old Plus Codes in database)
+        if (geocoder != null && config.getBoolean(Keys.GEOCODER_ON_REQUEST)) {
             endAddress = geocoder.getAddress(endTrip.getLatitude(), endTrip.getLongitude(), null);
+        }
+        // Fallback to database address only if geocoder fails
+        if (endAddress == null) {
+            endAddress = endTrip.getAddress();
         }
         trip.setEndAddress(endAddress);
 
@@ -235,9 +245,14 @@ public class ReportUtils {
         stop.setLatitude(startStop.getLatitude());
         stop.setLongitude(startStop.getLongitude());
         stop.setStartTime(startStop.getFixTime());
-        String address = startStop.getAddress();
-        if (address == null && geocoder != null && config.getBoolean(Keys.GEOCODER_ON_REQUEST)) {
+        String address = null;
+        // Force use Here API when onRequest is enabled (ignore old Plus Codes in database)
+        if (geocoder != null && config.getBoolean(Keys.GEOCODER_ON_REQUEST)) {
             address = geocoder.getAddress(stop.getLatitude(), stop.getLongitude(), null);
+        }
+        // Fallback to database address only if geocoder fails
+        if (address == null) {
+            address = startStop.getAddress();
         }
         stop.setAddress(address);
 

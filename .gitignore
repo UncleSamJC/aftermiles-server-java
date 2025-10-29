@@ -14,3 +14,10 @@ build
 bin
 deploy/
 deploy.zip
+
+# Configuration files with API keys (do not commit)
+debug.xml
+setup/traccar.xml
+
+# Frontend interface documentation (internal use only)
+frontend-interface-docs/*.md
