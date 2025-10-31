@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd"
+        logicalFilePath="changelog-6.12.0">
+
+  <changeSet author="aftermiles" id="changelog-6.12.0">
+
+    <createTable tableName="tc_maintenance_logs">
+      <column name="id" type="INT" autoIncrement="true">
+        <constraints primaryKey="true" />
+      </column>
+      <column name="deviceid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="date" type="TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="servicecompleted" type="VARCHAR(4000)">
+        <constraints nullable="false" />
+      </column>
+      <column name="completedby" type="VARCHAR(255)">
+        <constraints nullable="false" />
+      </column>
+      <column name="notes" type="VARCHAR(4000)" />
+      <column name="maintenancephotos" type="VARCHAR(4000)" />
+      <column name="createdbyuserid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="createdtime" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="modifiedtime" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="attributes" type="VARCHAR(4000)" />
+    </createTable>
+
+    <addForeignKeyConstraint
+        baseTableName="tc_maintenance_logs"
+        baseColumnNames="deviceid"
+        constraintName="fk_maintenancelogs_deviceid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
+        referencedTableName="tc_devices" />
+
+    <addForeignKeyConstraint
+        baseTableName="tc_maintenance_logs"
+        baseColumnNames="createdbyuserid"
+        constraintName="fk_maintenancelogs_userid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
+        referencedTableName="tc_users" />
+
+    <createIndex tableName="tc_maintenance_logs" indexName="idx_maintenance_deviceid">
+      <column name="deviceid" />
+    </createIndex>
+
+    <createIndex tableName="tc_maintenance_logs" indexName="idx_maintenance_date">
+      <column name="date" />
+    </createIndex>
+
+    <createIndex tableName="tc_maintenance_logs" indexName="idx_maintenance_device_date">
+      <column name="deviceid" />
+      <column name="date" />
+    </createIndex>
+
+    <createIndex tableName="tc_maintenance_logs" indexName="idx_maintenance_createdbyuserid">
+      <column name="createdbyuserid" />
+    </createIndex>
+
+  </changeSet>
+
+</databaseChangeLog>

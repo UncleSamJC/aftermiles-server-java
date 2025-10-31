@@ -23,6 +23,7 @@ import org.traccar.config.Config;
 import org.traccar.config.Keys;
 import org.traccar.database.MediaManager;
 import org.traccar.helper.LogAction;
+import org.traccar.helper.MediaUploadHelper;
 import org.traccar.model.Device;
 import org.traccar.model.Expense;
 import org.traccar.storage.StorageException;
@@ -45,12 +46,10 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -63,7 +62,6 @@ import java.util.stream.Stream;
 @Consumes(MediaType.APPLICATION_JSON)
 public class ExpenseResource extends BaseObjectResource<Expense> {
 
-    private static final int DEFAULT_BUFFER_SIZE = 8192;
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
     private static final Set<String> VALID_CATEGORIES = Set.of(
@@ -220,7 +218,7 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
 
         // Get Content-Type from FormDataBodyPart (correct way to get MIME type)
         String contentType = receiptBodyPart.getMediaType().toString();
-        if (!isValidImageType(contentType)) {
+        if (!MediaUploadHelper.isValidImageType(config, contentType, Keys.EXPENSE_ALLOWED_TYPES)) {
             Map<String, String> details = new HashMap<>();
             details.put("receipt", "Only JPEG, JPG and PNG formats are supported. Received: " + contentType);
             return buildErrorResponse("INVALID_FILE_TYPE", "Invalid file type", details);
@@ -255,44 +253,25 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
         expense.setModifiedTime(new Date());
 
         // Save receipt file with hierarchical directory structure: deviceId/year/month/
-        String receiptFileName = null;
-        try {
-            // Extract year and month from expense date
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(expenseDate);
-            int year = cal.get(Calendar.YEAR);
-            int month = cal.get(Calendar.MONTH) + 1; // Calendar.MONTH is 0-based
+        String extension = MediaUploadHelper.getFileExtension(receiptDetail.getFileName());
+        int maxFileSize = config.getInteger(Keys.EXPENSE_FILE_SIZE_LIMIT);
 
-            // Build hierarchical path: deviceId/year/month
-            String subPath = device.getUniqueId() + "/" + year + "/" + String.format("%02d", month);
+        MediaUploadHelper.UploadResult uploadResult = MediaUploadHelper.uploadSingleFile(
+                mediaManager,
+                receiptStream,
+                device.getUniqueId(),
+                expenseDate,
+                "receipt",
+                extension,
+                maxFileSize);
 
-            String extension = getFileExtension(receiptDetail.getFileName());
-            String fileName = "receipt_" + System.currentTimeMillis();
-
-            try (var output = mediaManager.createFileStream(subPath, fileName, extension)) {
-                long transferred = 0;
-                byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
-                int read;
-                int maxFileSize = config.getInteger(Keys.EXPENSE_FILE_SIZE_LIMIT);
-
-                while ((read = receiptStream.read(buffer, 0, buffer.length)) >= 0) {
-                    output.write(buffer, 0, read);
-                    transferred += read;
-                    if (transferred > maxFileSize) {
-                        Map<String, String> details = new HashMap<>();
-                        details.put("receipt", "File size exceeds limit of " + (maxFileSize / (1024 * 1024)) + "MB");
-                        return buildErrorResponse("FILE_TOO_LARGE", "File too large", details);
-                    }
-                }
-            }
-
-            receiptFileName = fileName + "." + extension;
-            // Store path as: deviceId/year/month/receipt_timestamp.ext
-            expense.setReceiptImagePath(subPath + "/" + receiptFileName);
-
-        } catch (IOException e) {
-            return buildErrorResponse("INTERNAL_ERROR", "Failed to save receipt file", null);
+        if (!uploadResult.isSuccess()) {
+            Map<String, String> details = new HashMap<>();
+            details.put("receipt", uploadResult.getErrorMessage());
+            return buildErrorResponse(uploadResult.getErrorCode(), uploadResult.getErrorMessage(), details);
         }
+
+        expense.setReceiptImagePath(uploadResult.getRelativePath());
 
         // Save to database (exclude id and optional fields that are not set)
         expense.setId(storage.addObject(expense, new Request(
@@ -398,34 +377,6 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
 
         actionLogger.remove(request, getUserId(), baseClass, id);
         return super.remove(id);
-    }
-
-    private boolean isValidImageType(String contentType) {
-        if (contentType == null || contentType.trim().isEmpty()) {
-            return false;
-        }
-
-        // Remove charset or other parameters (e.g., "image/jpeg; charset=UTF-8" -> "image/jpeg")
-        String baseContentType = contentType.split(";")[0].trim().toLowerCase();
-
-        // Get allowed types from config
-        String allowedTypes = config.getString(Keys.EXPENSE_ALLOWED_TYPES);
-
-        // Check if base content type matches any allowed type
-        for (String allowedType : allowedTypes.split(",")) {
-            if (baseContentType.equals(allowedType.trim().toLowerCase())) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private String getFileExtension(String fileName) {
-        if (fileName != null && fileName.contains(".")) {
-            return fileName.substring(fileName.lastIndexOf(".") + 1);
-        }
-        return "jpg";
     }
 
     private Response buildErrorResponse(String code, String message, Map<String, String> details) {
