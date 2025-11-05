@@ -35,6 +35,7 @@ import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Request;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -262,11 +263,28 @@ public class AiReceiptProcessor implements LifecycleObject {
 
             // CRITICAL FIX: Clean JSON string before deserialization
             // GPT sometimes returns string "null" instead of JSON null (e.g., "hst": "null")
-            // This causes NumberFormatException when Jackson tries to parse "null" as BigDecimal
-            // Use simple string replacement instead of regex to avoid pattern syntax issues
+            // This causes H2 JdbcSQLDataException: Data conversion error converting "'null'" to DECIMAL
+            // Although we've improved the GPT prompt, this is a defensive fallback layer
             String cleanedJson = gptStandardizedJson
-                    .replace(": \"null\"", ": null")   // "field": "null" → "field": null
-                    .replace(":\"null\"", ":null");     // "field":"null" → "field":null (no space)
+                    // Handle lowercase "null" with different spacing
+                    .replace(": \"null\"", ": null")     // "field": "null" → "field": null
+                    .replace(":\"null\"", ":null")       // "field":"null" → "field":null
+                    .replace(": \"null\" ", ": null ")   // "field": "null" , → "field": null ,
+                    .replace(": \" null\"", ": null")    // "field": " null" → "field": null
+                    .replace(": \"null \"", ": null")    // "field": "null " → "field": null
+                    .replace(": \" null \"", ": null")   // "field": " null " → "field": null
+                    // Handle capitalized variations (GPT sometimes capitalizes)
+                    .replace(": \"Null\"", ": null")
+                    .replace(":\"Null\"", ":null")
+                    .replace(": \"NULL\"", ": null")
+                    .replace(":\"NULL\"", ":null")
+                    // Handle other common error strings GPT might return
+                    .replace(": \"no-info\"", ": null")
+                    .replace(":\"no-info\"", ":null")
+                    .replace(": \"N/A\"", ": null")
+                    .replace(":\"N/A\"", ":null")
+                    .replace(": \"n/a\"", ": null")
+                    .replace(":\"n/a\"", ":null");
 
             // Step 3: Parse GPT output into ReceiptData object
             ReceiptDataExtractor.ReceiptData receiptData =
@@ -302,7 +320,8 @@ public class AiReceiptProcessor implements LifecycleObject {
             expense.setDeviceId(batch.getDeviceId());
             expense.setType(receiptData.getType());
             expense.setAmount(receiptData.getAmount());
-            expense.setCurrency(receiptData.getCurrency());
+            // Currency should be uppercase to match manual entry format (CAD, USD)
+            expense.setCurrency(receiptData.getCurrency().toUpperCase());
             expense.setMerchant(receiptData.getMerchant());
             expense.setExpenseDate(receiptData.getTransactionDate() != null
                     ? receiptData.getTransactionDate() : new Date());
@@ -341,9 +360,57 @@ public class AiReceiptProcessor implements LifecycleObject {
                 expense.setNotes(receiptData.getNotes());
             }
 
-            // Save to database - only exclude fields that are NEVER used
+            // CRITICAL FIX: Use Columns.Include to explicitly specify which fields to insert
+            // This prevents H2 from trying to convert null values for optional DECIMAL fields
+            // Build the list of columns to include dynamically based on what's set
+            List<String> columnsToInclude = new ArrayList<>();
+            // Always include required fields
+            columnsToInclude.add("deviceId");
+            columnsToInclude.add("type");
+            columnsToInclude.add("amount");
+            columnsToInclude.add("currency");
+            columnsToInclude.add("merchant");
+            columnsToInclude.add("expenseDate");
+            columnsToInclude.add("receiptImagePath");
+            columnsToInclude.add("batchItemId");
+            columnsToInclude.add("createdByUserId");
+            columnsToInclude.add("createdTime");
+            columnsToInclude.add("modifiedTime");
+
+            // Only include optional fields if they are not null
+            if (expense.getGst() != null) {
+                columnsToInclude.add("gst");
+            }
+            if (expense.getPst() != null) {
+                columnsToInclude.add("pst");
+            }
+            if (expense.getHst() != null) {
+                columnsToInclude.add("hst");
+            }
+            if (expense.getTotalTax() != null) {
+                columnsToInclude.add("totalTax");
+            }
+            if (expense.getCountry() != null) {
+                columnsToInclude.add("country");
+            }
+            if (expense.getProvinceState() != null) {
+                columnsToInclude.add("provinceState");
+            }
+            if (expense.getLocation() != null) {
+                columnsToInclude.add("location");
+            }
+            if (expense.getDescription() != null) {
+                columnsToInclude.add("description");
+            }
+            if (expense.getNotes() != null) {
+                columnsToInclude.add("notes");
+            }
+
+            // Save to database with explicit column inclusion
             expense.setId(storage.addObject(expense, new Request(
-                    new Columns.Exclude("id", "mileage", "tags"))));
+                    new Columns.Include(columnsToInclude.toArray(new String[0])))));
+
+            LOGGER.debug("Expense inserted with columns: {}", columnsToInclude);
 
             // Update item with success status and expense ID
             item.setStatus(AiReceiptBatchItem.STATUS_SUCCESS);
@@ -402,36 +469,78 @@ public class AiReceiptProcessor implements LifecycleObject {
     /**
      * Clean up ReceiptData to prevent "null" string conversion errors.
      * Converts empty strings and "null" strings to actual null values.
-     * CRITICAL: GPT sometimes returns string "null" instead of JSON null for optional fields.
+     * CRITICAL: Final validation layer before database insertion.
      */
     private void cleanReceiptData(ReceiptDataExtractor.ReceiptData data) {
         // Clean string fields - convert empty/null strings to null
         if (data.getCountry() != null && (data.getCountry().trim().isEmpty()
-                || data.getCountry().equalsIgnoreCase("null"))) {
+                || data.getCountry().equalsIgnoreCase("null")
+                || data.getCountry().equalsIgnoreCase("n/a")
+                || data.getCountry().equalsIgnoreCase("no-info"))) {
             data.setCountry(null);
         }
         if (data.getProvinceState() != null && (data.getProvinceState().trim().isEmpty()
-                || data.getProvinceState().equalsIgnoreCase("null"))) {
+                || data.getProvinceState().equalsIgnoreCase("null")
+                || data.getProvinceState().equalsIgnoreCase("n/a")
+                || data.getProvinceState().equalsIgnoreCase("no-info"))) {
             data.setProvinceState(null);
         }
         if (data.getLocation() != null && (data.getLocation().trim().isEmpty()
-                || data.getLocation().equalsIgnoreCase("null"))) {
+                || data.getLocation().equalsIgnoreCase("null")
+                || data.getLocation().equalsIgnoreCase("n/a")
+                || data.getLocation().equalsIgnoreCase("no-info"))) {
             data.setLocation(null);
         }
         if (data.getDescription() != null && (data.getDescription().trim().isEmpty()
-                || data.getDescription().equalsIgnoreCase("null"))) {
+                || data.getDescription().equalsIgnoreCase("null")
+                || data.getDescription().equalsIgnoreCase("n/a")
+                || data.getDescription().equalsIgnoreCase("no-info"))) {
             data.setDescription(null);
         }
         if (data.getNotes() != null && (data.getNotes().trim().isEmpty()
-                || data.getNotes().equalsIgnoreCase("null"))) {
+                || data.getNotes().equalsIgnoreCase("null")
+                || data.getNotes().equalsIgnoreCase("n/a")
+                || data.getNotes().equalsIgnoreCase("no-info"))) {
             data.setNotes(null);
         }
+        if (data.getMerchant() != null && (data.getMerchant().trim().isEmpty()
+                || data.getMerchant().equalsIgnoreCase("null")
+                || data.getMerchant().equalsIgnoreCase("n/a")
+                || data.getMerchant().equalsIgnoreCase("no-info"))) {
+            data.setMerchant(null);
+        }
+        if (data.getCurrency() != null && (data.getCurrency().trim().isEmpty()
+                || data.getCurrency().equalsIgnoreCase("null")
+                || data.getCurrency().equalsIgnoreCase("n/a")
+                || data.getCurrency().equalsIgnoreCase("no-info"))) {
+            data.setCurrency(null);
+        }
 
-        // CRITICAL FIX: BigDecimal fields can be affected by Jackson deserialization issues
-        // If GPT returns string "null", Jackson may fail to parse or create invalid BigDecimal
-        // We check and clean these fields explicitly
-        // Note: If these are already null (Java null), the getter returns null - that's fine
-        // This is a defensive check in case of any serialization issues
+        // CRITICAL FIX: Validate BigDecimal fields to prevent H2 conversion errors
+        // If Jackson somehow created an invalid BigDecimal or if value is negative/zero, nullify it
+        // This is the final defense layer - these should already be clean from previous layers
+
+        // Validate and clean tax fields (they should be null or positive)
+        if (data.getGst() != null && data.getGst().compareTo(BigDecimal.ZERO) < 0) {
+            LOGGER.warn("Invalid GST value detected (negative): {}. Setting to null.", data.getGst());
+            data.setGst(null);
+        }
+        if (data.getPst() != null && data.getPst().compareTo(BigDecimal.ZERO) < 0) {
+            LOGGER.warn("Invalid PST value detected (negative): {}. Setting to null.", data.getPst());
+            data.setPst(null);
+        }
+        if (data.getHst() != null && data.getHst().compareTo(BigDecimal.ZERO) < 0) {
+            LOGGER.warn("Invalid HST value detected (negative): {}. Setting to null.", data.getHst());
+            data.setHst(null);
+        }
+        if (data.getTotalTax() != null && data.getTotalTax().compareTo(BigDecimal.ZERO) < 0) {
+            LOGGER.warn("Invalid totalTax value detected (negative): {}. Setting to null.", data.getTotalTax());
+            data.setTotalTax(null);
+        }
+
+        // Log cleaned data for debugging
+        LOGGER.debug("ReceiptData cleaned - GST: {}, PST: {}, HST: {}, TotalTax: {}",
+                data.getGst(), data.getPst(), data.getHst(), data.getTotalTax());
     }
 
     /**

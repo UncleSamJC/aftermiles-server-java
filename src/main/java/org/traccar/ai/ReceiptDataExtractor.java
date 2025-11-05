@@ -18,8 +18,12 @@ package org.traccar.ai;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -33,23 +37,61 @@ public final class ReceiptDataExtractor {
     }
 
     /**
+     * Custom deserializer for BigDecimal that handles string "null" values.
+     * Prevents H2 JdbcSQLDataException when GPT returns "null" string instead of JSON null.
+     */
+    public static class NullSafeBigDecimalDeserializer extends JsonDeserializer<BigDecimal> {
+        @Override
+        public BigDecimal deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            String value = p.getText();
+            if (value == null || value.trim().isEmpty()
+                    || value.equalsIgnoreCase("null")
+                    || value.equalsIgnoreCase("n/a")
+                    || value.equalsIgnoreCase("no-info")) {
+                return null;
+            }
+            try {
+                return new BigDecimal(value);
+            } catch (NumberFormatException e) {
+                // If conversion fails, log and return null instead of throwing exception
+                return null;
+            }
+        }
+    }
+
+    /**
      * Receipt data in standardized format (populated by GPT from Azure Doc Intelligence).
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ReceiptData {
         private String merchant;
+
+        @JsonDeserialize(using = NullSafeBigDecimalDeserializer.class)
         private BigDecimal amount;
+
         private String currency;
         private Date transactionDate;
         private String location;
+
+        @JsonDeserialize(using = NullSafeBigDecimalDeserializer.class)
         private BigDecimal gst;
+
+        @JsonDeserialize(using = NullSafeBigDecimalDeserializer.class)
         private BigDecimal pst;
+
+        @JsonDeserialize(using = NullSafeBigDecimalDeserializer.class)
         private BigDecimal hst;
+
+        @JsonDeserialize(using = NullSafeBigDecimalDeserializer.class)
         private BigDecimal totalTax;
+
         private String country;
         private String provinceState;
+
+        @JsonDeserialize(using = NullSafeBigDecimalDeserializer.class)
         private BigDecimal confidence;
+
         private String type;
         private String description;
         private String notes;

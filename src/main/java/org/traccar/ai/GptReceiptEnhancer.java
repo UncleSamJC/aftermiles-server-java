@@ -69,35 +69,87 @@ public class GptReceiptEnhancer {
             - "supplies": Office supplies, equipment, tools, hardware stores
             - "others": Anything else
 
+            CRITICAL - NULL VALUE HANDLING:
+            ⚠️ This is the most important rule to prevent database errors!
+            - For optional fields with no data, use JSON null (not the string "null")
+            - For numeric fields (gst, pst, hst, totalTax, amount), NEVER use strings
+            - CORRECT:   "hst": null    or    "hst": 13.50
+            - WRONG:     "hst": "null"  (causes database conversion error!)
+            - WRONG:     "hst": "no-info"  (causes database conversion error!)
+            - If a numeric tax field has no data, use JSON null without quotes
+
+            CRITICAL - STRING FORMATTING:
+            - ALL string values MUST be lowercase
+            - CORRECT: "shell", "fuel", "cad", "canada", "ontario"
+            - WRONG: "Shell", "FUEL", "CAD", "Canada", "Ontario"
+            - This applies to: merchant, type, currency, country, provinceState, location, description, notes
+
             OUTPUT FORMAT (JSON only, no explanations):
             {
-              "merchant": "string",
+              "merchant": "string (lowercase)",
               "amount": number,
-              "currency": "string",
-              "type": "string",
+              "currency": "string (lowercase)",
+              "type": "string (lowercase)",
               "expenseDate": "YYYY-MM-DD",
-              "description": "string or null",
-              "location": "string or null",
-              "country": "string or null",
-              "provinceState": "string or null",
+              "description": "string (lowercase) or null",
+              "location": "string (lowercase) or null",
+              "country": "string (lowercase) or null",
+              "provinceState": "string (lowercase) or null",
               "gst": number or null,
               "pst": number or null,
               "hst": number or null,
               "totalTax": number or null,
-              "notes": "string or null"
+              "notes": "string (lowercase) or null"
+            }
+
+            EXAMPLE - CORRECT OUTPUT:
+            {
+              "merchant": "shell",
+              "amount": 45.20,
+              "currency": "cad",
+              "type": "fuel",
+              "expenseDate": "2024-03-15",
+              "description": "gasoline",
+              "location": "123 main st, toronto",
+              "country": "canada",
+              "provinceState": "ontario",
+              "gst": null,
+              "pst": null,
+              "hst": 5.22,
+              "totalTax": 5.22,
+              "notes": null
+            }
+
+            EXAMPLE - WRONG OUTPUT (DO NOT DO THIS):
+            {
+              "merchant": "Shell",              ❌ Not lowercase
+              "amount": "45.20",                ❌ String instead of number
+              "currency": "CAD",                ❌ Not lowercase
+              "type": "Fuel",                   ❌ Not lowercase
+              "expenseDate": "2024-03-15",
+              "description": "Gasoline",        ❌ Not lowercase
+              "location": null,
+              "country": "Canada",              ❌ Not lowercase
+              "provinceState": "Ontario",       ❌ Not lowercase
+              "gst": "null",                    ❌ String "null" instead of JSON null
+              "pst": "no-info",                 ❌ String instead of JSON null
+              "hst": "5.22",                    ❌ String instead of number
+              "totalTax": 5.22,
+              "notes": "null"                   ❌ String "null" instead of JSON null
             }
 
             VALIDATION RULES:
             - All amounts must be positive numbers with max 2 decimal places
-            - merchant is required and max 100 characters
+            - merchant is required and max 100 characters (lowercase)
             - amount is required and > 0. This is the total price paid, including tax.
-            - currency is required (default "CAD" if not found)
-            - type must be one of the valid types listed above
+            - currency is required (default "cad" if not found, always lowercase)
+            - type must be one of the valid types listed above (always lowercase)
             - expenseDate is required (format: YYYY-MM-DD)
             - If province is identified, apply correct tax structure
             - totalTax should equal sum of all tax fields (gst + pst OR hst)
-            - Use null for optional fields if data is not available or uncertain
+            - Use JSON null (not string "null") for optional fields if data is not available
             - Extract only facts from the receipt, do not invent data
+            - Remember: ALL strings must be lowercase!
             """;
 
     private final Config config;

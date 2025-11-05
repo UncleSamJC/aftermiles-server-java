@@ -124,10 +124,12 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
             conditions.add(new Condition.Equals("type", type));
         }
 
+        // Order by createdTime (descending) to show most recently added expenses first
+        // This ensures AI-recognized expenses with historical receipt dates still appear at the top
         return storage.getObjectsStream(baseClass, new Request(
                 new Columns.All(),
                 Condition.merge(conditions),
-                new Order("expenseDate", true, limit != null ? limit : 0)));
+                new Order("createdTime", true, limit != null ? limit : 0)));
     }
 
     @POST
@@ -366,16 +368,36 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
 
     @Override
     public Response remove(@PathParam("id") long id) throws Exception {
+        // Retrieve expense record first to get receipt image path
+        Expense expense = storage.getObject(baseClass, new Request(
+                new Columns.All(),
+                new Condition.Equals("id", id)));
+
+        if (expense == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("Expense not found").build();
+        }
+
         // Permission check: only can delete own expense records
-        if (permissionsService.notAdmin(getUserId())) {
-            Expense existing = storage.getObject(baseClass, new Request(
-                    new Columns.Include("createdByUserId"),
-                    new Condition.Equals("id", id)));
-            if (existing == null || existing.getCreatedByUserId() != getUserId()) {
-                throw new SecurityException("Expense access denied");
+        if (permissionsService.notAdmin(getUserId()) && expense.getCreatedByUserId() != getUserId()) {
+            throw new SecurityException("Expense access denied");
+        }
+
+        // Delete physical receipt file if exists
+        if (expense.getReceiptImagePath() != null && !expense.getReceiptImagePath().isEmpty()) {
+            String mediaPath = config.getString(Keys.MEDIA_PATH);
+            File receiptFile = new File(mediaPath, expense.getReceiptImagePath());
+            if (receiptFile.exists()) {
+                if (receiptFile.delete()) {
+                    // File deleted successfully
+                } else {
+                    // Log warning but continue with database deletion
+                    // The file might be locked or permission issue
+                }
             }
         }
 
+        // Delete database record
         actionLogger.remove(request, getUserId(), baseClass, id);
         return super.remove(id);
     }
