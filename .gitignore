@@ -24,3 +24,6 @@ frontend-interface-docs/*.md
 
 # Deployment configuration (local only)
 deploy-config.local.sh
+
+# Design documents with API keys and sensitive information
+AI_FEES_DESIGN.md

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh Administrator@172.93.167.110 \"powershell -Command \"\"Get-Content ''C:\\Program Files\\Traccar\\logs\\tracker-server.log'' | Select-String ''config'' | Select-Object -Last 5\"\"\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -45,8 +45,10 @@ import jakarta.ws.rs.core.Response;
 
 import java.io.File;
 import java.io.InputStream;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -60,7 +62,7 @@ import java.util.Map;
 @Consumes(MediaType.APPLICATION_JSON)
 public class MaintenanceLogResource extends BaseObjectResource<MaintenanceLog> {
 
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final int MAX_PHOTOS = 10;
 
     @Inject
@@ -123,13 +125,14 @@ public class MaintenanceLogResource extends BaseObjectResource<MaintenanceLog> {
         // Validate and parse date
         Date maintenanceDate;
         try {
-            maintenanceDate = DATE_FORMAT.parse(dateStr);
+            LocalDate localDate = LocalDate.parse(dateStr, DATE_FORMAT);
+            maintenanceDate = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
             if (maintenanceDate.after(new Date())) {
                 Map<String, String> details = new HashMap<>();
                 details.put("date", "Date cannot be in the future");
                 return buildErrorResponse("FUTURE_DATE_ERROR", "Invalid date", details);
             }
-        } catch (ParseException e) {
+        } catch (DateTimeParseException e) {
             Map<String, String> details = new HashMap<>();
             details.put("date", "Date must be in format YYYY-MM-DD");
             return buildErrorResponse("VALIDATION_ERROR", "Invalid input parameters", details);
@@ -226,7 +229,8 @@ public class MaintenanceLogResource extends BaseObjectResource<MaintenanceLog> {
         Map<String, Object> data = new HashMap<>();
         data.put("id", maintenanceLog.getId());
         data.put("deviceId", String.valueOf(maintenanceLog.getDeviceId()));
-        data.put("date", DATE_FORMAT.format(maintenanceLog.getDate()));
+        data.put("date", maintenanceLog.getDate().toInstant()
+                .atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FORMAT));
         data.put("serviceCompleted", maintenanceLog.getServiceCompleted());
         data.put("completedBy", maintenanceLog.getCompletedBy());
         data.put("notes", maintenanceLog.getNotes());
@@ -271,6 +275,11 @@ public class MaintenanceLogResource extends BaseObjectResource<MaintenanceLog> {
         conditions.add(new Condition.Equals("deviceId", deviceId));
         conditions.add(new Condition.Between("date", startDate, endDate));
 
+        // Permission control: non-admin users can only view their own maintenance logs
+        if (permissionsService.notAdmin(getUserId())) {
+            conditions.add(new Condition.Equals("createdByUserId", getUserId()));
+        }
+
         // Get all matching records (returns immutable list)
         List<MaintenanceLog> immutableLogs = storage.getObjects(baseClass, new Request(
                 new Columns.All(),
@@ -288,7 +297,8 @@ public class MaintenanceLogResource extends BaseObjectResource<MaintenanceLog> {
             Map<String, Object> logData = new HashMap<>();
             logData.put("id", log.getId());
             logData.put("deviceId", String.valueOf(log.getDeviceId()));
-            logData.put("date", DATE_FORMAT.format(log.getDate()));
+            logData.put("date", log.getDate().toInstant()
+                    .atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FORMAT));
             logData.put("serviceCompleted", log.getServiceCompleted());
             logData.put("completedBy", log.getCompletedBy());
             logData.put("notes", log.getNotes());
@@ -297,7 +307,12 @@ public class MaintenanceLogResource extends BaseObjectResource<MaintenanceLog> {
             results.add(logData);
         }
 
-        return Response.ok(results).build();
+        // Build success response with wrapper
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", results);
+
+        return Response.ok(response).build();
     }
 
     @GET

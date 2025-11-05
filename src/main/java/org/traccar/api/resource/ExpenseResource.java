@@ -275,7 +275,8 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
 
         // Save to database (exclude id and optional fields that are not set)
         expense.setId(storage.addObject(expense, new Request(
-                new Columns.Exclude("id", "mileage", "location", "description"))));
+                new Columns.Exclude("id", "mileage", "location", "description",
+                        "gst", "pst", "hst", "totalTax", "country", "provinceState", "batchItemId"))));
         actionLogger.create(request, getUserId(), expense);
 
         // Build success response

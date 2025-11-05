@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd"
+        logicalFilePath="changelog-6.13.0">
+
+  <changeSet author="aftermiles" id="changelog-6.13.0-ai-receipts">
+
+    <!-- Create AI Receipt Batches table -->
+    <createTable tableName="tc_ai_receipts_batches">
+      <column name="id" type="INT" autoIncrement="true">
+        <constraints primaryKey="true" />
+      </column>
+      <column name="deviceid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="userid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="status" type="VARCHAR(20)">
+        <constraints nullable="false" />
+      </column>
+      <column name="totalreceipts" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="successcount" type="INT" defaultValueNumeric="0">
+        <constraints nullable="false" />
+      </column>
+      <column name="failedcount" type="INT" defaultValueNumeric="0">
+        <constraints nullable="false" />
+      </column>
+      <column name="lowconfidencecount" type="INT" defaultValueNumeric="0">
+        <constraints nullable="false" />
+      </column>
+      <column name="createdtime" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="startedtime" type="TIMESTAMP" />
+      <column name="completedtime" type="TIMESTAMP" />
+      <column name="attributes" type="VARCHAR(4000)" />
+    </createTable>
+
+    <addForeignKeyConstraint
+        baseTableName="tc_ai_receipts_batches"
+        baseColumnNames="deviceid"
+        constraintName="fk_ai_receipts_batches_deviceid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
+        referencedTableName="tc_devices" />
+
+    <addForeignKeyConstraint
+        baseTableName="tc_ai_receipts_batches"
+        baseColumnNames="userid"
+        constraintName="fk_ai_receipts_batches_userid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
+        referencedTableName="tc_users" />
+
+    <createIndex tableName="tc_ai_receipts_batches" indexName="idx_ai_receipts_batches_user">
+      <column name="userid" />
+      <column name="createdtime" descending="true" />
+    </createIndex>
+
+    <createIndex tableName="tc_ai_receipts_batches" indexName="idx_ai_receipts_batches_status">
+      <column name="status" />
+    </createIndex>
+
+    <!-- Create AI Receipt Batch Items table -->
+    <createTable tableName="tc_ai_receipts_batch_items">
+      <column name="id" type="INT" autoIncrement="true">
+        <constraints primaryKey="true" />
+      </column>
+      <column name="batchid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="receiptimagepath" type="VARCHAR(500)">
+        <constraints nullable="false" />
+      </column>
+      <column name="status" type="VARCHAR(20)">
+        <constraints nullable="false" />
+      </column>
+      <column name="confidence" type="DECIMAL(5,4)" />
+      <column name="expenseid" type="INT" />
+      <column name="errormessage" type="VARCHAR(1000)" />
+      <column name="rawairesponse" type="TEXT" />
+      <column name="createdtime" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="processedtime" type="TIMESTAMP" />
+      <column name="attributes" type="VARCHAR(4000)" />
+    </createTable>
+
+    <addForeignKeyConstraint
+        baseTableName="tc_ai_receipts_batch_items"
+        baseColumnNames="batchid"
+        constraintName="fk_ai_receipts_batch_items_batchid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
+        referencedTableName="tc_ai_receipts_batches" />
+
+    <addForeignKeyConstraint
+        baseTableName="tc_ai_receipts_batch_items"
+        baseColumnNames="expenseid"
+        constraintName="fk_ai_receipts_batch_items_expenseid"
+        onDelete="SET NULL"
+        referencedColumnNames="id"
+        referencedTableName="tc_expenses" />
+
+    <createIndex tableName="tc_ai_receipts_batch_items" indexName="idx_ai_receipts_batch_items_batch">
+      <column name="batchid" />
+    </createIndex>
+
+    <createIndex tableName="tc_ai_receipts_batch_items" indexName="idx_ai_receipts_batch_items_status">
+      <column name="status" />
+    </createIndex>
+
+    <!-- Extend tc_expenses table with AI-related fields -->
+    <addColumn tableName="tc_expenses">
+      <column name="gst" type="DECIMAL(10,2)" />
+      <column name="pst" type="DECIMAL(10,2)" />
+      <column name="hst" type="DECIMAL(10,2)" />
+      <column name="totaltax" type="DECIMAL(10,2)" />
+      <column name="country" type="VARCHAR(100)" />
+      <column name="provincestate" type="VARCHAR(150)" />
+      <column name="batchitemid" type="INT" />
+    </addColumn>
+
+    <addForeignKeyConstraint
+        baseTableName="tc_expenses"
+        baseColumnNames="batchitemid"
+        constraintName="fk_expenses_batchitemid"
+        onDelete="SET NULL"
+        referencedColumnNames="id"
+        referencedTableName="tc_ai_receipts_batch_items" />
+
+    <createIndex tableName="tc_expenses" indexName="idx_expenses_batchitem">
+      <column name="batchitemid" />
+    </createIndex>
+
+  </changeSet>
+
+</databaseChangeLog>

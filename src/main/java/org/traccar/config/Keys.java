@@ -790,6 +790,75 @@ public final class Keys {
             "image/jpeg,image/png,image/jpg");
 
     /**
+     * Azure Document Intelligence endpoint URL for AI receipt processing.
+     */
+    public static final ConfigKey<String> AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT = new StringConfigKey(
+            "azure.documentIntelligence.endpoint",
+            List.of(KeyType.CONFIG));
+
+    /**
+     * Azure Document Intelligence API key for AI receipt processing.
+     */
+    public static final ConfigKey<String> AZURE_DOCUMENT_INTELLIGENCE_KEY = new StringConfigKey(
+            "azure.documentIntelligence.key",
+            List.of(KeyType.CONFIG));
+
+    /**
+     * AI receipt processing confidence threshold. Receipts with confidence below this threshold
+     * require manual entry. Value between 0.0 and 1.0. Default is 0.96 (96%).
+     */
+    public static final ConfigKey<Double> AI_RECEIPT_CONFIDENCE_THRESHOLD = new DoubleConfigKey(
+            "aiReceipt.confidenceThreshold",
+            List.of(KeyType.CONFIG),
+            0.96);
+
+    /**
+     * Maximum number of receipts allowed per batch for AI processing. Default is 5.
+     */
+    public static final ConfigKey<Integer> AI_RECEIPT_MAX_BATCH_SIZE = new IntegerConfigKey(
+            "aiReceipt.maxBatchSize",
+            List.of(KeyType.CONFIG),
+            5);
+
+    /**
+     * Number of worker threads for AI receipt background processing. Default is 2.
+     */
+    public static final ConfigKey<Integer> AI_RECEIPT_WORKER_THREADS = new IntegerConfigKey(
+            "aiReceipt.workerThreads",
+            List.of(KeyType.CONFIG),
+            2);
+
+    /**
+     * Azure OpenAI endpoint URL for GPT receipt enhancement.
+     * Example: https://your-resource.openai.azure.com/
+     */
+    public static final ConfigKey<String> AZURE_OPENAI_ENDPOINT = new StringConfigKey(
+            "azureOpenai.endpoint",
+            List.of(KeyType.CONFIG));
+
+    /**
+     * Azure OpenAI API key for authentication.
+     */
+    public static final ConfigKey<String> AZURE_OPENAI_KEY = new StringConfigKey(
+            "azureOpenai.key",
+            List.of(KeyType.CONFIG));
+
+    /**
+     * Azure OpenAI deployment name for GPT model (e.g., gpt-35-turbo).
+     */
+    public static final ConfigKey<String> AZURE_OPENAI_DEPLOYMENT = new StringConfigKey(
+            "azureOpenai.deployment",
+            List.of(KeyType.CONFIG));
+
+    /**
+     * Azure OpenAI API version. Default is 2024-08-01-preview.
+     */
+    public static final ConfigKey<String> AZURE_OPENAI_API_VERSION = new StringConfigKey(
+            "azureOpenai.apiVersion",
+            List.of(KeyType.CONFIG),
+            "2024-08-01-preview");
+
+    /**
      * Optional parameter to specify network interface for web interface to bind to. By default server will bind to all
      * available interfaces.
      */

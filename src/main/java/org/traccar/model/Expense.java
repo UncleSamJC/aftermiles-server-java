@@ -184,4 +184,74 @@ public class Expense extends ExtendedModel {
         this.createdByUserId = createdByUserId;
     }
 
+    private BigDecimal gst;
+
+    public BigDecimal getGst() {
+        return gst;
+    }
+
+    public void setGst(BigDecimal gst) {
+        this.gst = gst;
+    }
+
+    private BigDecimal pst;
+
+    public BigDecimal getPst() {
+        return pst;
+    }
+
+    public void setPst(BigDecimal pst) {
+        this.pst = pst;
+    }
+
+    private BigDecimal hst;
+
+    public BigDecimal getHst() {
+        return hst;
+    }
+
+    public void setHst(BigDecimal hst) {
+        this.hst = hst;
+    }
+
+    private BigDecimal totalTax;
+
+    public BigDecimal getTotalTax() {
+        return totalTax;
+    }
+
+    public void setTotalTax(BigDecimal totalTax) {
+        this.totalTax = totalTax;
+    }
+
+    private String country;
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    private String provinceState;
+
+    public String getProvinceState() {
+        return provinceState;
+    }
+
+    public void setProvinceState(String provinceState) {
+        this.provinceState = provinceState;
+    }
+
+    private Long batchItemId;
+
+    public Long getBatchItemId() {
+        return batchItemId;
+    }
+
+    public void setBatchItemId(Long batchItemId) {
+        this.batchItemId = batchItemId;
+    }
+
 }
