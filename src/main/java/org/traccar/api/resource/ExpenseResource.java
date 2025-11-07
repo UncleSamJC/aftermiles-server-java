@@ -18,6 +18,8 @@ package org.traccar.api.resource;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.traccar.api.BaseObjectResource;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
@@ -35,6 +37,7 @@ import org.traccar.storage.query.Request;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -61,6 +64,8 @@ import java.util.stream.Stream;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class ExpenseResource extends BaseObjectResource<Expense> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExpenseResource.class);
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -305,6 +310,27 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
     }
 
     @GET
+    @Path("{id}")
+    @Override
+    public Response getSingle(@PathParam("id") long id) throws StorageException {
+        // Retrieve expense record
+        Expense expense = storage.getObject(baseClass, new Request(
+                new Columns.All(),
+                new Condition.Equals("id", id)));
+
+        if (expense == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        // Permission check: only can view own expense records
+        if (permissionsService.notAdmin(getUserId()) && expense.getCreatedByUserId() != getUserId()) {
+            throw new SecurityException("Expense access denied");
+        }
+
+        return Response.ok(expense).build();
+    }
+
+    @GET
     @Path("{id}/receipt")
     @Produces("image/*")
     public Response getReceipt(@PathParam("id") long expenseId) throws StorageException {
@@ -358,28 +384,37 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
         // Set modified time, but don't modify creation time and creator
         entity.setModifiedTime(new Date());
 
+        // Only allow updating user-editable fields (exclude AI-generated and system fields)
         storage.updateObject(entity, new Request(
-                new Columns.Exclude("id", "createdTime", "createdByUserId", "receiptImagePath"),
+                new Columns.Include("amount", "currency", "merchant", "expenseDate", "notes", "tags",
+                        "type", "country", "provinceState", "modifiedTime", "deviceId"),
                 new Condition.Equals("id", entity.getId())));
 
         actionLogger.edit(request, getUserId(), entity);
         return Response.ok(entity).build();
     }
 
+    @Path("{id}")
+    @DELETE
     @Override
     public Response remove(@PathParam("id") long id) throws Exception {
+        LOGGER.info("DELETE request for expense id={} by user={}", id, getUserId());
+
         // Retrieve expense record first to get receipt image path
         Expense expense = storage.getObject(baseClass, new Request(
                 new Columns.All(),
                 new Condition.Equals("id", id)));
 
         if (expense == null) {
+            LOGGER.warn("DELETE failed - expense id={} not found", id);
             return Response.status(Response.Status.NOT_FOUND)
                     .entity("Expense not found").build();
         }
 
         // Permission check: only can delete own expense records
         if (permissionsService.notAdmin(getUserId()) && expense.getCreatedByUserId() != getUserId()) {
+            LOGGER.warn("DELETE failed - access denied for expense id={}, user={}, owner={}",
+                    id, getUserId(), expense.getCreatedByUserId());
             throw new SecurityException("Expense access denied");
         }
 
@@ -389,17 +424,24 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
             File receiptFile = new File(mediaPath, expense.getReceiptImagePath());
             if (receiptFile.exists()) {
                 if (receiptFile.delete()) {
-                    // File deleted successfully
+                    LOGGER.info("Deleted receipt file: {}", receiptFile.getAbsolutePath());
                 } else {
-                    // Log warning but continue with database deletion
-                    // The file might be locked or permission issue
+                    LOGGER.warn("Failed to delete receipt file: {}", receiptFile.getAbsolutePath());
                 }
             }
         }
 
         // Delete database record
-        actionLogger.remove(request, getUserId(), baseClass, id);
-        return super.remove(id);
+        try {
+            storage.removeObject(baseClass, new Request(new Condition.Equals("id", id)));
+            actionLogger.remove(request, getUserId(), baseClass, id);
+            LOGGER.info("Successfully deleted expense id={} by user={}", id, getUserId());
+        } catch (Exception e) {
+            LOGGER.error("Failed to delete expense id={} from database", id, e);
+            throw e;
+        }
+
+        return Response.noContent().build();
     }
 
     private Response buildErrorResponse(String code, String message, Map<String, String> details) {

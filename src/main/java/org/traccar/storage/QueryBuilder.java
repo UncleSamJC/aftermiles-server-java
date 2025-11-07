@@ -27,6 +27,7 @@ import org.traccar.model.Permission;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -133,6 +134,16 @@ public final class QueryBuilder {
         return setValue(() -> statement.setDouble(index + 1, value));
     }
 
+    public QueryBuilder setBigDecimal(int index, BigDecimal value) throws SQLException {
+        return setValue(() -> {
+            if (value == null) {
+                statement.setNull(index + 1, Types.NUMERIC);
+            } else {
+                statement.setBigDecimal(index + 1, value);
+            }
+        });
+    }
+
     public QueryBuilder setString(int index, String value) throws SQLException {
         return setValue(() -> {
             if (value == null) {
@@ -199,6 +210,22 @@ public final class QueryBuilder {
                     setDate(index, (Date) method.invoke(object));
                 } else if (method.getReturnType().equals(byte[].class)) {
                     setBlob(index, (byte[]) method.invoke(object));
+                } else if (method.getReturnType().equals(BigDecimal.class)) {
+                    setBigDecimal(index, (BigDecimal) method.invoke(object));
+                } else if (method.getReturnType().equals(Long.class)) {
+                    Long value = (Long) method.invoke(object);
+                    if (value != null) {
+                        setLong(index, value);
+                    } else {
+                        statement.setNull(index + 1, Types.BIGINT);
+                    }
+                } else if (method.getReturnType().equals(Integer.class)) {
+                    Integer value = (Integer) method.invoke(object);
+                    if (value != null) {
+                        setInteger(index, value);
+                    } else {
+                        statement.setNull(index + 1, Types.INTEGER);
+                    }
                 } else {
                     setString(index, objectMapper.writeValueAsString(method.invoke(object)));
                 }
@@ -236,6 +263,22 @@ public final class QueryBuilder {
             });
         } else if (parameterType.equals(byte[].class)) {
             processors.add((object, resultSet) -> method.invoke(object, (Object) resultSet.getBytes(name)));
+        } else if (parameterType.equals(BigDecimal.class)) {
+            processors.add((object, resultSet) -> method.invoke(object, resultSet.getBigDecimal(name)));
+        } else if (parameterType.equals(Long.class)) {
+            processors.add((object, resultSet) -> {
+                long value = resultSet.getLong(name);
+                if (!resultSet.wasNull()) {
+                    method.invoke(object, value);
+                }
+            });
+        } else if (parameterType.equals(Integer.class)) {
+            processors.add((object, resultSet) -> {
+                int value = resultSet.getInt(name);
+                if (!resultSet.wasNull()) {
+                    method.invoke(object, value);
+                }
+            });
         } else {
             processors.add((object, resultSet) -> {
                 String value = resultSet.getString(name);

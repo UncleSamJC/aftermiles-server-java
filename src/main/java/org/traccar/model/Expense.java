@@ -15,6 +15,8 @@
  */
 package org.traccar.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.traccar.storage.StorageName;
 
 import java.math.BigDecimal;
@@ -44,6 +46,7 @@ public class Expense extends ExtendedModel {
         this.deviceId = deviceId;
     }
 
+    @JsonProperty("category")
     private String type;
 
     public String getType() {
@@ -84,6 +87,8 @@ public class Expense extends ExtendedModel {
         this.description = description;
     }
 
+    @JsonProperty("date")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date expenseDate;
 
     public Date getExpenseDate() {
