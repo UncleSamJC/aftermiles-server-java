@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MobilogixProtocolEncoderTest extends ProtocolTest {
     private final Date time = Date.from(
-            LocalDateTime.of(LocalDate.of(2025, 2, 22), LocalTime.of(1, 2, 3)).atZone(ZoneOffset.systemDefault()).toInstant());
+            LocalDateTime.of(LocalDate.of(2025, 2, 22), LocalTime.of(1, 2, 3)).atZone(ZoneOffset.UTC).toInstant());
 
     @Test
     public void testEncode() throws Exception {

@@ -9,7 +9,7 @@
   <changeSet author="aftermiles" id="changelog-6.13.0-ai-receipts">
 
     <!-- Create AI Receipt Batches table -->
-    <createTable tableName="tc_ai_receipts_batches">
+    <createTable tableName="tcaf_ai_receipts_batches">
       <column name="id" type="INT" autoIncrement="true">
         <constraints primaryKey="true" />
       </column>
@@ -43,32 +43,32 @@
     </createTable>
 
     <addForeignKeyConstraint
-        baseTableName="tc_ai_receipts_batches"
+        baseTableName="tcaf_ai_receipts_batches"
         baseColumnNames="deviceid"
-        constraintName="fk_ai_receipts_batches_deviceid"
+        constraintName="fk_tcaf_ai_receipts_batches_deviceid"
         onDelete="CASCADE"
         referencedColumnNames="id"
         referencedTableName="tc_devices" />
 
     <addForeignKeyConstraint
-        baseTableName="tc_ai_receipts_batches"
+        baseTableName="tcaf_ai_receipts_batches"
         baseColumnNames="userid"
-        constraintName="fk_ai_receipts_batches_userid"
+        constraintName="fk_tcaf_ai_receipts_batches_userid"
         onDelete="CASCADE"
         referencedColumnNames="id"
         referencedTableName="tc_users" />
 
-    <createIndex tableName="tc_ai_receipts_batches" indexName="idx_ai_receipts_batches_user">
+    <createIndex tableName="tcaf_ai_receipts_batches" indexName="idx_tcaf_ai_receipts_batches_user">
       <column name="userid" />
       <column name="createdtime" descending="true" />
     </createIndex>
 
-    <createIndex tableName="tc_ai_receipts_batches" indexName="idx_ai_receipts_batches_status">
+    <createIndex tableName="tcaf_ai_receipts_batches" indexName="idx_tcaf_ai_receipts_batches_status">
       <column name="status" />
     </createIndex>
 
     <!-- Create AI Receipt Batch Items table -->
-    <createTable tableName="tc_ai_receipts_batch_items">
+    <createTable tableName="tcaf_ai_receipts_batch_items">
       <column name="id" type="INT" autoIncrement="true">
         <constraints primaryKey="true" />
       </column>
@@ -93,31 +93,31 @@
     </createTable>
 
     <addForeignKeyConstraint
-        baseTableName="tc_ai_receipts_batch_items"
+        baseTableName="tcaf_ai_receipts_batch_items"
         baseColumnNames="batchid"
-        constraintName="fk_ai_receipts_batch_items_batchid"
+        constraintName="fk_tcaf_ai_receipts_batch_items_batchid"
         onDelete="CASCADE"
         referencedColumnNames="id"
-        referencedTableName="tc_ai_receipts_batches" />
+        referencedTableName="tcaf_ai_receipts_batches" />
 
     <addForeignKeyConstraint
-        baseTableName="tc_ai_receipts_batch_items"
+        baseTableName="tcaf_ai_receipts_batch_items"
         baseColumnNames="expenseid"
-        constraintName="fk_ai_receipts_batch_items_expenseid"
+        constraintName="fk_tcaf_ai_receipts_batch_items_expenseid"
         onDelete="SET NULL"
         referencedColumnNames="id"
-        referencedTableName="tc_expenses" />
+        referencedTableName="tcaf_expenses" />
 
-    <createIndex tableName="tc_ai_receipts_batch_items" indexName="idx_ai_receipts_batch_items_batch">
+    <createIndex tableName="tcaf_ai_receipts_batch_items" indexName="idx_tcaf_ai_receipts_batch_items_batch">
       <column name="batchid" />
     </createIndex>
 
-    <createIndex tableName="tc_ai_receipts_batch_items" indexName="idx_ai_receipts_batch_items_status">
+    <createIndex tableName="tcaf_ai_receipts_batch_items" indexName="idx_tcaf_ai_receipts_batch_items_status">
       <column name="status" />
     </createIndex>
 
-    <!-- Extend tc_expenses table with AI-related fields -->
-    <addColumn tableName="tc_expenses">
+    <!-- Extend tcaf_expenses table with AI-related fields -->
+    <addColumn tableName="tcaf_expenses">
       <column name="gst" type="DECIMAL(10,2)" />
       <column name="pst" type="DECIMAL(10,2)" />
       <column name="hst" type="DECIMAL(10,2)" />
@@ -128,14 +128,14 @@
     </addColumn>
 
     <addForeignKeyConstraint
-        baseTableName="tc_expenses"
+        baseTableName="tcaf_expenses"
         baseColumnNames="batchitemid"
-        constraintName="fk_expenses_batchitemid"
+        constraintName="fk_tcaf_expenses_batchitemid"
         onDelete="SET NULL"
         referencedColumnNames="id"
-        referencedTableName="tc_ai_receipts_batch_items" />
+        referencedTableName="tcaf_ai_receipts_batch_items" />
 
-    <createIndex tableName="tc_expenses" indexName="idx_expenses_batchitem">
+    <createIndex tableName="tcaf_expenses" indexName="idx_tcaf_expenses_batchitem">
       <column name="batchitemid" />
     </createIndex>
 

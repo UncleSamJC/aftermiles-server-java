@@ -28,7 +28,6 @@ import org.traccar.model.Calendar;
 import org.traccar.model.Device;
 import org.traccar.model.Event;
 import org.traccar.model.Geofence;
-import org.traccar.model.Maintenance;
 import org.traccar.model.Position;
 import org.traccar.notification.MessageException;
 import org.traccar.notification.NotificatorManager;
@@ -155,9 +154,10 @@ public class NotificationManager {
             if (event.getGeofenceId() != 0) {
                 eventData.setGeofence(cacheManager.getObject(Geofence.class, event.getGeofenceId()));
             }
-            if (event.getMaintenanceId() != 0) {
-                eventData.setMaintenance(cacheManager.getObject(Maintenance.class, event.getMaintenanceId()));
-            }
+            // Maintenance feature removed - not used in this application
+            // if (event.getMaintenanceId() != 0) {
+            //     eventData.setMaintenance(null);
+            // }
             eventForwarder.forward(eventData, (success, throwable) -> {
                 if (!success) {
                     LOGGER.warn("Event forwarding failed", throwable);

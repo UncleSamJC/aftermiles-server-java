@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-@StorageName("tc_maintenance_logs")
+@StorageName("tcaf_maintenance_logs")
 public class MaintenanceLog extends ExtendedModel {
 
     private long deviceId;

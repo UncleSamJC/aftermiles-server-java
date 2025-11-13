@@ -20,7 +20,7 @@ import org.traccar.storage.StorageName;
 import java.math.BigDecimal;
 import java.util.Date;
 
-@StorageName("tc_ai_receipts_batch_items")
+@StorageName("tcaf_ai_receipts_batch_items")
 public class AiReceiptBatchItem extends ExtendedModel {
 
     public static final String STATUS_PENDING = "PENDING";

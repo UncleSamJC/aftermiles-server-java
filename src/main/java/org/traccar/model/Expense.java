@@ -22,7 +22,7 @@ import org.traccar.storage.StorageName;
 import java.math.BigDecimal;
 import java.util.Date;
 
-@StorageName("tc_expenses")
+@StorageName("tcaf_expenses")
 public class Expense extends ExtendedModel {
 
     public static final String TYPE_FUEL = "fuel";

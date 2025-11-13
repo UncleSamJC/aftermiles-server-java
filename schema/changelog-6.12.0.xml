@@ -8,7 +8,7 @@
 
   <changeSet author="aftermiles" id="changelog-6.12.0">
 
-    <createTable tableName="tc_maintenance_logs">
+    <createTable tableName="tcaf_maintenance_logs">
       <column name="id" type="INT" autoIncrement="true">
         <constraints primaryKey="true" />
       </column>
@@ -39,35 +39,35 @@
     </createTable>
 
     <addForeignKeyConstraint
-        baseTableName="tc_maintenance_logs"
+        baseTableName="tcaf_maintenance_logs"
         baseColumnNames="deviceid"
-        constraintName="fk_maintenancelogs_deviceid"
+        constraintName="fk_tcaf_maintenancelogs_deviceid"
         onDelete="CASCADE"
         referencedColumnNames="id"
         referencedTableName="tc_devices" />
 
     <addForeignKeyConstraint
-        baseTableName="tc_maintenance_logs"
+        baseTableName="tcaf_maintenance_logs"
         baseColumnNames="createdbyuserid"
-        constraintName="fk_maintenancelogs_userid"
+        constraintName="fk_tcaf_maintenancelogs_userid"
         onDelete="CASCADE"
         referencedColumnNames="id"
         referencedTableName="tc_users" />
 
-    <createIndex tableName="tc_maintenance_logs" indexName="idx_maintenance_deviceid">
+    <createIndex tableName="tcaf_maintenance_logs" indexName="idx_tcaf_maintenance_deviceid">
       <column name="deviceid" />
     </createIndex>
 
-    <createIndex tableName="tc_maintenance_logs" indexName="idx_maintenance_date">
+    <createIndex tableName="tcaf_maintenance_logs" indexName="idx_tcaf_maintenance_date">
       <column name="date" />
     </createIndex>
 
-    <createIndex tableName="tc_maintenance_logs" indexName="idx_maintenance_device_date">
+    <createIndex tableName="tcaf_maintenance_logs" indexName="idx_tcaf_maintenance_device_date">
       <column name="deviceid" />
       <column name="date" />
     </createIndex>
 
-    <createIndex tableName="tc_maintenance_logs" indexName="idx_maintenance_createdbyuserid">
+    <createIndex tableName="tcaf_maintenance_logs" indexName="idx_tcaf_maintenance_createdbyuserid">
       <column name="createdbyuserid" />
     </createIndex>
 

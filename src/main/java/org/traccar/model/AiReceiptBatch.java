@@ -19,7 +19,7 @@ import org.traccar.storage.StorageName;
 
 import java.util.Date;
 
-@StorageName("tc_ai_receipts_batches")
+@StorageName("tcaf_ai_receipts_batches")
 public class AiReceiptBatch extends ExtendedModel {
 
     public static final String STATUS_PENDING = "PENDING";

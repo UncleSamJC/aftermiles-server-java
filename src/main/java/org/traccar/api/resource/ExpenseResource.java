@@ -54,6 +54,7 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -68,6 +69,10 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ExpenseResource.class);
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+
+    static {
+        DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
 
     private static final Set<String> VALID_CATEGORIES = Set.of(
         Expense.TYPE_FUEL,

@@ -67,6 +67,9 @@ public class Event extends Message {
     public static final String TYPE_DRIVER_CHANGED = "driverChanged";
     public static final String TYPE_MEDIA = "media";
 
+    public static final String TYPE_REALTIME_TRIP_START = "realtimeTripStart";
+    public static final String TYPE_REALTIME_TRIP_END = "realtimeTripEnd";
+
     private Date eventTime;
 
     public Date getEventTime() {

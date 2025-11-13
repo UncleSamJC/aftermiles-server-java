@@ -2132,4 +2132,47 @@ public final class Keys {
             "broadcast.secondary",
             List.of(KeyType.CONFIG));
 
+    /**
+     * Minimum stop duration in milliseconds for trip end detection. A trip ends when the vehicle has been stopped
+     * for this duration with ignition off.
+     */
+    public static final ConfigKey<Long> REALTIME_TRIP_MIN_STOP_DURATION = new LongConfigKey(
+            "realtimeTrip.minStopDuration",
+            List.of(KeyType.CONFIG),
+            180000L);
+
+    /**
+     * Minimum trip distance in meters. Trips shorter than this distance will be filtered out.
+     */
+    public static final ConfigKey<Double> REALTIME_TRIP_MIN_DISTANCE = new DoubleConfigKey(
+            "realtimeTrip.minDistance",
+            List.of(KeyType.CONFIG),
+            100.0);
+
+    /**
+     * Minimum trip duration in milliseconds. Trips shorter than this duration will be filtered out.
+     */
+    public static final ConfigKey<Long> REALTIME_TRIP_MIN_DURATION = new LongConfigKey(
+            "realtimeTrip.minDuration",
+            List.of(KeyType.CONFIG),
+            60000L);
+
+    /**
+     * Enable daily trip splitting at midnight (23:59:59). When enabled, ongoing trips will be automatically split
+     * at the end of each day.
+     */
+    public static final ConfigKey<Boolean> REALTIME_TRIP_DAILY_SPLIT = new BooleanConfigKey(
+            "realtimeTrip.dailySplit",
+            List.of(KeyType.CONFIG),
+            false);
+
+    /**
+     * Require ignition signal for trip detection. When enabled, trips will only be detected based on ignition
+     * state changes. When disabled, trips can be detected based on movement alone.
+     */
+    public static final ConfigKey<Boolean> REALTIME_TRIP_IGNITION_REQUIRED = new BooleanConfigKey(
+            "realtimeTrip.ignitionRequired",
+            List.of(KeyType.CONFIG),
+            true);
+
 }

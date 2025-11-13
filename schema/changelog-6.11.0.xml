@@ -8,33 +8,33 @@
 
   <changeSet author="author" id="changelog-6.11.0">
 
-    <!-- Add merchant column to tc_expenses table -->
-    <addColumn tableName="tc_expenses">
+    <!-- Add merchant column to tcaf_expenses table -->
+    <addColumn tableName="tcaf_expenses">
       <column name="merchant" type="VARCHAR(100)">
         <constraints nullable="true" />
       </column>
     </addColumn>
 
-    <!-- Add tags column to tc_expenses table -->
-    <addColumn tableName="tc_expenses">
+    <!-- Add tags column to tcaf_expenses table -->
+    <addColumn tableName="tcaf_expenses">
       <column name="tags" type="VARCHAR(200)">
         <constraints nullable="true" />
       </column>
     </addColumn>
 
     <!-- Create index on merchant for better query performance -->
-    <createIndex tableName="tc_expenses" indexName="idx_expenses_merchant">
+    <createIndex tableName="tcaf_expenses" indexName="idx_tcaf_expenses_merchant">
       <column name="merchant" />
     </createIndex>
 
     <!-- Create composite index for common query patterns -->
-    <createIndex tableName="tc_expenses" indexName="idx_expenses_device_date">
+    <createIndex tableName="tcaf_expenses" indexName="idx_tcaf_expenses_device_date">
       <column name="deviceid" />
       <column name="expensedate" />
     </createIndex>
 
     <!-- Create index on type for filtering by expense category -->
-    <createIndex tableName="tc_expenses" indexName="idx_expenses_type">
+    <createIndex tableName="tcaf_expenses" indexName="idx_tcaf_expenses_type">
       <column name="type" />
     </createIndex>
 

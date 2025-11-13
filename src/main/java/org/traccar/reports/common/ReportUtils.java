@@ -38,7 +38,6 @@ import org.traccar.helper.model.PositionUtil;
 import org.traccar.helper.model.UserUtil;
 import org.traccar.model.BaseModel;
 import org.traccar.model.Device;
-import org.traccar.model.Driver;
 import org.traccar.model.Event;
 import org.traccar.model.Position;
 import org.traccar.model.User;
@@ -125,18 +124,6 @@ public class ReportUtils {
         return null;
     }
 
-    public String findDriverName(String driverUniqueId) throws StorageException {
-        if (driverUniqueId != null) {
-            Driver driver = storage.getObject(Driver.class, new Request(
-                    new Columns.All(),
-                    new Condition.Equals("uniqueId", driverUniqueId)));
-            if (driver != null) {
-                return driver.getName();
-            }
-        }
-        return null;
-    }
-
     public org.jxls.common.Context initializeContext(long userId) throws StorageException {
         var server = permissionsService.getServer();
         var user = permissionsService.getUser(userId);
@@ -216,8 +203,9 @@ public class ReportUtils {
         trip.setMaxSpeed(maxSpeed);
         trip.setSpentFuel(calculateFuel(startTrip, endTrip, device));
 
-        trip.setDriverUniqueId(findDriver(startTrip, endTrip));
-        trip.setDriverName(findDriverName(trip.getDriverUniqueId()));
+        // Driver feature removed - user = driver in this application
+        // trip.setDriverUniqueId(findDriver(startTrip, endTrip));
+        // trip.setDriverName(null);
 
         if (!ignoreOdometer
                 && startTrip.getDouble(Position.KEY_ODOMETER) != 0

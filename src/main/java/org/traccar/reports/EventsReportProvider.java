@@ -24,7 +24,6 @@ import org.traccar.model.Device;
 import org.traccar.model.Event;
 import org.traccar.model.Geofence;
 import org.traccar.model.Group;
-import org.traccar.model.Maintenance;
 import org.traccar.model.Position;
 import org.traccar.reports.common.ReportUtils;
 import org.traccar.reports.model.DeviceReportSection;
@@ -99,10 +98,12 @@ public class EventsReportProvider {
                     if (geofenceId > 0 && reportUtils.getObject(userId, Geofence.class, geofenceId) == null) {
                         return false;
                     }
-                    long maintenanceId = event.getMaintenanceId();
-                    if (maintenanceId > 0 && reportUtils.getObject(userId, Maintenance.class, maintenanceId) == null) {
-                        return false;
-                    }
+                    // Maintenance feature removed - not used in this application
+                    // long maintenanceId = event.getMaintenanceId();
+                    // if (maintenanceId > 0
+                    //         && reportUtils.getObject(userId, Maintenance.class, maintenanceId) == null) {
+                    //     return false;
+                    // }
                     return true;
                 });
     }
@@ -134,13 +135,16 @@ public class EventsReportProvider {
                                 geofenceNames.put(geofenceId, geofence.getName());
                                 events.add(event);
                             }
-                        } else if (maintenanceId != 0) {
-                            Maintenance maintenance = reportUtils.getObject(userId, Maintenance.class, maintenanceId);
-                            if (maintenance != null) {
-                                maintenanceNames.put(maintenanceId, maintenance.getName());
-                                events.add(event);
-                            }
                         } else {
+                            // Maintenance feature removed - not used in this application
+                            // else if (maintenanceId != 0) {
+                            //     Maintenance maintenance = reportUtils.getObject(
+                            //             userId, Maintenance.class, maintenanceId);
+                            //     if (maintenance != null) {
+                            //         maintenanceNames.put(maintenanceId, maintenance.getName());
+                            //         events.add(event);
+                            //     }
+                            // }
                             events.add(event);
                         }
                     }

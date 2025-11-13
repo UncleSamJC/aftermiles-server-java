@@ -29,7 +29,6 @@ import org.traccar.handler.ComputedAttributesHandler;
 import org.traccar.handler.CopyAttributesHandler;
 import org.traccar.handler.DatabaseHandler;
 import org.traccar.handler.DistanceHandler;
-import org.traccar.handler.DriverHandler;
 import org.traccar.handler.EngineHoursHandler;
 import org.traccar.handler.FilterHandler;
 import org.traccar.handler.GeocoderHandler;
@@ -40,17 +39,16 @@ import org.traccar.handler.MotionHandler;
 import org.traccar.handler.OutdatedHandler;
 import org.traccar.handler.PositionForwardingHandler;
 import org.traccar.handler.PostProcessHandler;
+import org.traccar.handler.RealtimeTripDetectionHandler;
 import org.traccar.handler.SpeedLimitHandler;
 import org.traccar.handler.TimeHandler;
 import org.traccar.handler.events.AlarmEventHandler;
 import org.traccar.handler.events.BaseEventHandler;
 import org.traccar.handler.events.BehaviorEventHandler;
 import org.traccar.handler.events.CommandResultEventHandler;
-import org.traccar.handler.events.DriverEventHandler;
 import org.traccar.handler.events.FuelEventHandler;
 import org.traccar.handler.events.GeofenceEventHandler;
 import org.traccar.handler.events.IgnitionEventHandler;
-import org.traccar.handler.events.MaintenanceEventHandler;
 import org.traccar.handler.events.MediaEventHandler;
 import org.traccar.handler.events.MotionEventHandler;
 import org.traccar.handler.events.OverspeedEventHandler;
@@ -107,11 +105,11 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
                 SpeedLimitHandler.class,
                 MotionHandler.class,
                 ComputedAttributesHandler.Late.class,
-                DriverHandler.class,
                 CopyAttributesHandler.class,
                 EngineHoursHandler.class,
                 PositionForwardingHandler.class,
-                DatabaseHandler.class)
+                DatabaseHandler.class,
+                RealtimeTripDetectionHandler.class)
                 .map((clazz) -> (BasePositionHandler) injector.getInstance(clazz))
                 .filter(Objects::nonNull)
                 .toList();
@@ -125,9 +123,7 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
                 MotionEventHandler.class,
                 GeofenceEventHandler.class,
                 AlarmEventHandler.class,
-                IgnitionEventHandler.class,
-                MaintenanceEventHandler.class,
-                DriverEventHandler.class)
+                IgnitionEventHandler.class)
                 .map((clazz) -> (BaseEventHandler) injector.getInstance(clazz))
                 .filter(Objects::nonNull)
                 .toList();

@@ -8,7 +8,7 @@
 
   <changeSet author="author" id="changelog-6.10.0">
 
-    <createTable tableName="tc_expenses">
+    <createTable tableName="tcaf_expenses">
       <column name="id" type="INT" autoIncrement="true">
         <constraints primaryKey="true" />
       </column>
@@ -44,31 +44,31 @@
       <column name="attributes" type="VARCHAR(4000)" />
     </createTable>
 
-    <addForeignKeyConstraint 
-        baseTableName="tc_expenses" 
-        baseColumnNames="deviceid" 
-        constraintName="fk_expenses_deviceid" 
-        onDelete="CASCADE" 
-        referencedColumnNames="id" 
+    <addForeignKeyConstraint
+        baseTableName="tcaf_expenses"
+        baseColumnNames="deviceid"
+        constraintName="fk_tcaf_expenses_deviceid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
         referencedTableName="tc_devices" />
 
-    <addForeignKeyConstraint 
-        baseTableName="tc_expenses" 
-        baseColumnNames="createdbyuserid" 
-        constraintName="fk_expenses_createdbyuserid" 
-        onDelete="CASCADE" 
-        referencedColumnNames="id" 
+    <addForeignKeyConstraint
+        baseTableName="tcaf_expenses"
+        baseColumnNames="createdbyuserid"
+        constraintName="fk_tcaf_expenses_createdbyuserid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
         referencedTableName="tc_users" />
 
-    <createIndex tableName="tc_expenses" indexName="idx_expenses_deviceid">
+    <createIndex tableName="tcaf_expenses" indexName="idx_tcaf_expenses_deviceid">
       <column name="deviceid" />
     </createIndex>
 
-    <createIndex tableName="tc_expenses" indexName="idx_expenses_expensedate">
+    <createIndex tableName="tcaf_expenses" indexName="idx_tcaf_expenses_expensedate">
       <column name="expensedate" />
     </createIndex>
 
-    <createIndex tableName="tc_expenses" indexName="idx_expenses_createdbyuserid">
+    <createIndex tableName="tcaf_expenses" indexName="idx_tcaf_expenses_createdbyuserid">
       <column name="createdbyuserid" />
     </createIndex>
 

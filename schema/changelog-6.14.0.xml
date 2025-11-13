@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd"
+        logicalFilePath="changelog-6.14.0">
+
+  <changeSet author="aftermiles" id="changelog-6.14.0-realtime-trips">
+
+    <!-- Create Real-time Trips table -->
+    <createTable tableName="tcaf_realtime_trips">
+      <column name="id" type="INT" autoIncrement="true">
+        <constraints primaryKey="true" />
+      </column>
+      <column name="deviceid" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="userid" type="INT" />
+      <column name="startodometer" type="DOUBLE" />
+      <column name="startpositionid" type="INT" />
+      <column name="endpositionid" type="INT" />
+      <column name="starttime" type="TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="endtime" type="TIMESTAMP" />
+      <column name="distance" type="DOUBLE" />
+      <column name="duration" type="BIGINT" />
+      <column name="startaddress" type="VARCHAR(512)" />
+      <column name="endaddress" type="VARCHAR(512)" />
+      <column name="attributes" type="VARCHAR(4000)" />
+    </createTable>
+
+    <!-- Add foreign key constraints -->
+    <addForeignKeyConstraint
+        baseTableName="tcaf_realtime_trips"
+        baseColumnNames="deviceid"
+        constraintName="fk_tcaf_realtime_trips_deviceid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
+        referencedTableName="tc_devices" />
+
+    <addForeignKeyConstraint
+        baseTableName="tcaf_realtime_trips"
+        baseColumnNames="userid"
+        constraintName="fk_tcaf_realtime_trips_userid"
+        onDelete="SET NULL"
+        referencedColumnNames="id"
+        referencedTableName="tc_users" />
+
+    <!-- Position foreign keys removed: tc_positions table does not have primary key constraint -->
+    <!-- startpositionid and endpositionid are stored as plain references -->
+
+    <!-- Create indexes for efficient querying -->
+    <createIndex tableName="tcaf_realtime_trips" indexName="idx_tcaf_realtime_trips_deviceid_starttime">
+      <column name="deviceid" />
+      <column name="starttime" descending="true" />
+    </createIndex>
+
+    <createIndex tableName="tcaf_realtime_trips" indexName="idx_tcaf_realtime_trips_time_range">
+      <column name="starttime" />
+      <column name="endtime" />
+    </createIndex>
+
+    <createIndex tableName="tcaf_realtime_trips" indexName="idx_tcaf_realtime_trips_active">
+      <column name="endtime" />
+    </createIndex>
+
+    <createIndex tableName="tcaf_realtime_trips" indexName="idx_tcaf_realtime_trips_deviceid">
+      <column name="deviceid" />
+    </createIndex>
+
+  </changeSet>
+
+</databaseChangeLog>
