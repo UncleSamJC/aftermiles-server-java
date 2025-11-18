@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd"
+        logicalFilePath="changelog-6.15.0">
+
+  <!-- User Receipt Quota Management Tables -->
+
+  <changeSet author="aftermiles" id="changelog-6.15.0-user-receipt-quota">
+
+    <!-- Create User Receipt Quota table -->
+    <createTable tableName="tcaf_user_receipt_quota">
+      <column name="id" type="BIGINT" autoIncrement="true">
+        <constraints primaryKey="true" />
+      </column>
+      <column name="userid" type="BIGINT">
+        <constraints nullable="false" />
+      </column>
+      <column name="year" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="usertype" type="VARCHAR(64)">
+        <constraints nullable="false" />
+      </column>
+      <column name="maxlimit" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="currentusage" type="INT" defaultValueNumeric="0">
+        <constraints nullable="false" />
+      </column>
+      <column name="createdat" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+      <column name="updatedat" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+    </createTable>
+
+    <!-- Add foreign key constraint -->
+    <addForeignKeyConstraint
+        baseTableName="tcaf_user_receipt_quota"
+        baseColumnNames="userid"
+        constraintName="fk_tcaf_user_receipt_quota_userid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
+        referencedTableName="tc_users" />
+
+    <!-- Add unique constraint for (userid, year) -->
+    <addUniqueConstraint
+        tableName="tcaf_user_receipt_quota"
+        columnNames="userid, year"
+        constraintName="uq_tcaf_user_receipt_quota_user_year" />
+
+    <!-- Create indexes for efficient querying -->
+    <createIndex tableName="tcaf_user_receipt_quota" indexName="idx_tcaf_user_receipt_quota_userid">
+      <column name="userid" />
+    </createIndex>
+
+    <createIndex tableName="tcaf_user_receipt_quota" indexName="idx_tcaf_user_receipt_quota_year">
+      <column name="year" />
+    </createIndex>
+
+    <!-- Add check constraints (PostgreSQL syntax) -->
+    <sql dbms="postgresql">
+      ALTER TABLE tcaf_user_receipt_quota ADD CONSTRAINT chk_tcaf_user_receipt_quota_current_usage CHECK (currentusage >= 0);
+      ALTER TABLE tcaf_user_receipt_quota ADD CONSTRAINT chk_tcaf_user_receipt_quota_max_limit CHECK (maxlimit > 0);
+    </sql>
+
+  </changeSet>
+
+  <changeSet author="aftermiles" id="changelog-6.15.0-user-receipt-usage-log">
+
+    <!-- Create User Receipt Usage Log table (optional, for auditing) -->
+    <createTable tableName="tcaf_user_receipt_usage_log">
+      <column name="id" type="BIGINT" autoIncrement="true">
+        <constraints primaryKey="true" />
+      </column>
+      <column name="userid" type="BIGINT">
+        <constraints nullable="false" />
+      </column>
+      <column name="receiptid" type="BIGINT">
+        <constraints nullable="true" />
+      </column>
+      <column name="action" type="VARCHAR(32)">
+        <constraints nullable="false" />
+      </column>
+      <column name="changeamount" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="usagebefore" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="usageafter" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="createdat" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false" />
+      </column>
+    </createTable>
+
+    <!-- Add foreign key constraint -->
+    <addForeignKeyConstraint
+        baseTableName="tcaf_user_receipt_usage_log"
+        baseColumnNames="userid"
+        constraintName="fk_tcaf_user_receipt_usage_log_userid"
+        onDelete="CASCADE"
+        referencedColumnNames="id"
+        referencedTableName="tc_users" />
+
+    <!-- Create indexes for efficient querying -->
+    <createIndex tableName="tcaf_user_receipt_usage_log" indexName="idx_tcaf_user_receipt_usage_log_userid">
+      <column name="userid" />
+    </createIndex>
+
+    <createIndex tableName="tcaf_user_receipt_usage_log" indexName="idx_tcaf_user_receipt_usage_log_createdat">
+      <column name="createdat" descending="true" />
+    </createIndex>
+
+  </changeSet>
+
+</databaseChangeLog>

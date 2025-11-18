@@ -15,6 +15,7 @@
  */
 package org.traccar.session.state;
 
+import org.traccar.model.AFTrip;
 import org.traccar.model.Position;
 
 import java.util.Date;
@@ -35,53 +36,22 @@ public class RealtimeTripState {
         return deviceId;
     }
 
-    // Current ongoing trip ID (null if no active trip)
-    private Long currentTripId;
+    // Current ongoing trip object (null if no active trip)
+    private AFTrip currentTrip;
 
-    public Long getCurrentTripId() {
-        return currentTripId;
+    public AFTrip getCurrentTrip() {
+        return currentTrip;
     }
 
-    public void setCurrentTripId(Long currentTripId) {
-        this.currentTripId = currentTripId;
+    public void setCurrentTrip(AFTrip currentTrip) {
+        this.currentTrip = currentTrip;
     }
 
     public boolean hasActiveTrip() {
-        return currentTripId != null;
+        return currentTrip != null;
     }
 
-    // Trip start information
-    private Date tripStartTime;
-
-    public Date getTripStartTime() {
-        return tripStartTime;
-    }
-
-    public void setTripStartTime(Date tripStartTime) {
-        this.tripStartTime = tripStartTime;
-    }
-
-    private Long tripStartPositionId;
-
-    public Long getTripStartPositionId() {
-        return tripStartPositionId;
-    }
-
-    public void setTripStartPositionId(Long tripStartPositionId) {
-        this.tripStartPositionId = tripStartPositionId;
-    }
-
-    private Double startOdometer;
-
-    public Double getStartOdometer() {
-        return startOdometer;
-    }
-
-    public void setStartOdometer(Double startOdometer) {
-        this.startOdometer = startOdometer;
-    }
-
-    // Motion tracking
+    // Motion tracking (for trip detection)
     private Boolean lastIgnitionState;
 
     public Boolean getLastIgnitionState() {
@@ -113,16 +83,6 @@ public class RealtimeTripState {
         this.lastStopTime = lastStopTime;
     }
 
-    private Double accumulatedDistance;
-
-    public Double getAccumulatedDistance() {
-        return accumulatedDistance;
-    }
-
-    public void setAccumulatedDistance(Double accumulatedDistance) {
-        this.accumulatedDistance = accumulatedDistance;
-    }
-
     // Last processed position (for calculating distance)
     private Position lastPosition;
 
@@ -135,27 +95,29 @@ public class RealtimeTripState {
     }
 
     /**
-     * Reset state when starting a new trip
+     * Start a new trip with the given AFTrip object
      */
-    public void startNewTrip(long tripId, Position startPosition) {
-        this.currentTripId = tripId;
-        this.tripStartTime = startPosition.getFixTime();
-        this.tripStartPositionId = startPosition.getId();
-        this.startOdometer = startPosition.getDouble(Position.KEY_ODOMETER);
-        this.accumulatedDistance = 0.0;
+    public void startNewTrip(AFTrip trip, Position startPosition) {
+        this.currentTrip = trip;
         this.lastStopTime = null;
         this.lastPosition = startPosition;
+    }
+
+    /**
+     * Update accumulated distance for ongoing trip
+     */
+    public void updateTripDistance(double distanceIncrement) {
+        if (currentTrip != null) {
+            Double current = currentTrip.getDistance();
+            currentTrip.setDistance((current != null ? current : 0.0) + distanceIncrement);
+        }
     }
 
     /**
      * Reset state when ending a trip
      */
     public void endTrip() {
-        this.currentTripId = null;
-        this.tripStartTime = null;
-        this.tripStartPositionId = null;
-        this.startOdometer = null;
-        this.accumulatedDistance = null;
+        this.currentTrip = null;
         this.lastStopTime = null;
     }
 

@@ -24,10 +24,12 @@ import org.traccar.api.BaseObjectResource;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
 import org.traccar.database.MediaManager;
+import org.traccar.database.ReceiptQuotaManager;
 import org.traccar.helper.LogAction;
 import org.traccar.helper.MediaUploadHelper;
 import org.traccar.model.Device;
 import org.traccar.model.Expense;
+import org.traccar.model.User;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
@@ -95,6 +97,9 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
 
     @Inject
     private LogAction actionLogger;
+
+    @Inject
+    private ReceiptQuotaManager receiptQuotaManager;
 
     @Context
     private HttpServletRequest request;
@@ -221,6 +226,36 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
             return buildErrorResponse("VALIDATION_ERROR", "Invalid input parameters", details);
         }
 
+        // ===== QUOTA CHECK: Check user expiration and receipt scan quota =====
+        try {
+            // Check if user account has expired
+            User currentUser = storage.getObject(User.class, new Request(
+                new Columns.Include("expirationTime"),
+                new Condition.Equals("id", getUserId())
+            ));
+
+            if (currentUser != null && currentUser.getExpirationTime() != null
+                    && currentUser.getExpirationTime().before(new Date())) {
+                Map<String, String> details = new HashMap<>();
+                details.put("quota", "Your account has expired. Please renew your subscription.");
+                return buildErrorResponse("ACCOUNT_EXPIRED", "Account expired", details);
+            }
+
+            // Check if user has available scan quota
+            if (!receiptQuotaManager.hasQuota(getUserId())) {
+                int remaining = receiptQuotaManager.getRemainingQuota(getUserId());
+                Map<String, String> details = new HashMap<>();
+                details.put("quota", "Receipt scan quota exceeded (" + remaining + " remaining). "
+                    + "Please upgrade your account for more scans.");
+                return buildErrorResponse("QUOTA_EXCEEDED", "Scan quota exceeded", details);
+            }
+        } catch (StorageException e) {
+            LOGGER.warn("Quota check failed for user {}: {}", getUserId(), e.getMessage());
+            // If quota system fails, allow the operation to proceed (fail-open policy)
+            // This ensures existing functionality isn't broken by quota system issues
+        }
+        // ===== QUOTA CHECK END =====
+
         // Validate receipt file
         if (receiptStream == null || receiptBodyPart == null) {
             Map<String, String> details = new HashMap<>();
@@ -291,6 +326,17 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
                         "gst", "pst", "hst", "totalTax", "country", "provinceState", "batchItemId"))));
         actionLogger.create(request, getUserId(), expense);
 
+        // ===== QUOTA DEDUCTION: Decrement receipt scan quota =====
+        try {
+            receiptQuotaManager.incrementReceiptUsage(getUserId(), expense.getId());
+            LOGGER.info("Deducted 1 scan quota for user {} (expenseId={})", getUserId(), expense.getId());
+        } catch (StorageException e) {
+            LOGGER.error("Failed to decrement quota for user {} after creating expense {}: {}",
+                    getUserId(), expense.getId(), e.getMessage());
+            // Note: Expense is already created. In production, consider compensating transaction
+        }
+        // ===== QUOTA DEDUCTION END =====
+
         // Build success response
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -310,6 +356,14 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
 
         response.put("data", data);
         response.put("message", "Expense record created successfully");
+
+        // Add remaining quota info to response
+        try {
+            int remainingQuota = receiptQuotaManager.getRemainingQuota(getUserId());
+            response.put("remainingQuota", remainingQuota);
+        } catch (StorageException e) {
+            // Ignore quota info error, don't affect main response
+        }
 
         return Response.ok(response).build();
     }
@@ -441,6 +495,19 @@ public class ExpenseResource extends BaseObjectResource<Expense> {
             storage.removeObject(baseClass, new Request(new Condition.Equals("id", id)));
             actionLogger.remove(request, getUserId(), baseClass, id);
             LOGGER.info("Successfully deleted expense id={} by user={}", id, getUserId());
+
+            // ===== QUOTA RESTORATION: Restore receipt scan quota =====
+            try {
+                receiptQuotaManager.decrementReceiptUsage(expense.getCreatedByUserId(), id);
+                LOGGER.info("Restored 1 scan quota for user {} after deleting expense {}",
+                        expense.getCreatedByUserId(), id);
+            } catch (StorageException qe) {
+                LOGGER.error("Failed to restore quota for user {} after deleting expense {}: {}",
+                        expense.getCreatedByUserId(), id, qe.getMessage());
+                // Note: Expense is already deleted. This is a non-critical error.
+            }
+            // ===== QUOTA RESTORATION END =====
+
         } catch (Exception e) {
             LOGGER.error("Failed to delete expense id={} from database", id, e);
             throw e;

@@ -19,6 +19,7 @@ import org.traccar.api.BaseObjectResource;
 import org.traccar.helper.LogAction;
 import org.traccar.model.AFTrip;
 import org.traccar.model.Device;
+import org.traccar.session.state.RealtimeTripStateManager;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
@@ -56,6 +57,9 @@ public class AFTripResource extends BaseObjectResource<AFTrip> {
 
     @Inject
     private LogAction actionLogger;
+
+    @Inject
+    private RealtimeTripStateManager stateManager;
 
     @Context
     private HttpServletRequest request;
@@ -140,13 +144,18 @@ public class AFTripResource extends BaseObjectResource<AFTrip> {
             conditions.add(new Condition.Equals("userId", getUserId()));
         }
 
-        // Get all matching trips (returns immutable list)
+        // Get all matching trips from database (returns immutable list)
         List<AFTrip> immutableTrips = storage.getObjects(baseClass, new Request(
                 new Columns.All(),
                 Condition.merge(conditions)));
 
-        // Create mutable copy for sorting
+        // Create mutable copy for merging
         List<AFTrip> trips = new ArrayList<>(immutableTrips);
+
+        // Get active trips from memory and merge
+        Long userIdFilter = permissionsService.notAdmin(getUserId()) ? getUserId() : null;
+        List<AFTrip> activeTrips = stateManager.getActiveTrips(fromDate, toDate, deviceId, userIdFilter);
+        trips.addAll(activeTrips);
 
         // Sort by startTime descending (newest first)
         trips.sort((a, b) -> b.getStartTime().compareTo(a.getStartTime()));

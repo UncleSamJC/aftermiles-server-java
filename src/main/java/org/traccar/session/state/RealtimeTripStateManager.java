@@ -19,11 +19,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
+import org.traccar.model.AFTrip;
 import org.traccar.model.Position;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Manages real-time trip states for all devices.
@@ -168,8 +172,7 @@ public class RealtimeTripStateManager {
             // Calculate distance from last position
             double distance = position.getDouble(Position.KEY_DISTANCE);
             if (distance > 0) {
-                Double accumulated = state.getAccumulatedDistance();
-                state.setAccumulatedDistance((accumulated != null ? accumulated : 0.0) + distance);
+                state.updateTripDistance(distance);
             }
         }
     }
@@ -196,19 +199,20 @@ public class RealtimeTripStateManager {
             return false;
         }
 
+        AFTrip trip = state.getCurrentTrip();
         double minDistance = config.getDouble(Keys.REALTIME_TRIP_MIN_DISTANCE);
         long minDuration = config.getLong(Keys.REALTIME_TRIP_MIN_DURATION);
 
         // Check distance
-        Double accumulated = state.getAccumulatedDistance();
-        if (accumulated == null || accumulated < minDistance) {
+        Double distance = trip.getDistance();
+        if (distance == null || distance < minDistance) {
             LOGGER.debug("Trip for device {} does not meet minimum distance ({} < {})",
-                    state.getDeviceId(), accumulated, minDistance);
+                    state.getDeviceId(), distance, minDistance);
             return false;
         }
 
         // Check duration
-        long duration = endPosition.getFixTime().getTime() - state.getTripStartTime().getTime();
+        long duration = endPosition.getFixTime().getTime() - trip.getStartTime().getTime();
         if (duration < minDuration) {
             LOGGER.debug("Trip for device {} does not meet minimum duration ({} < {})",
                     state.getDeviceId(), duration, minDuration);
@@ -216,6 +220,34 @@ public class RealtimeTripStateManager {
         }
 
         return true;
+    }
+
+    /**
+     * Get all active trips in memory, optionally filtered by time range, device, and user
+     */
+    public List<AFTrip> getActiveTrips(Date fromDate, Date toDate, Long deviceId, Long userId) {
+        return deviceStates.values().stream()
+                .filter(state -> state.hasActiveTrip())
+                .map(RealtimeTripState::getCurrentTrip)
+                .filter(trip -> {
+                    // Filter by time range (startTime must be within range)
+                    if (fromDate != null && trip.getStartTime().before(fromDate)) {
+                        return false;
+                    }
+                    if (toDate != null && trip.getStartTime().after(toDate)) {
+                        return false;
+                    }
+                    // Filter by deviceId
+                    if (deviceId != null && trip.getDeviceId() != deviceId) {
+                        return false;
+                    }
+                    // Filter by userId
+                    if (userId != null && !userId.equals(trip.getUserId())) {
+                        return false;
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
     }
 
 }

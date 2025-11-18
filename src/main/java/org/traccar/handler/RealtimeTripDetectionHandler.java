@@ -28,7 +28,6 @@ import org.traccar.session.state.RealtimeTripStateManager;
 import org.traccar.storage.Storage;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
-import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Request;
 
 /**
@@ -74,9 +73,14 @@ public class RealtimeTripDetectionHandler extends BasePositionHandler {
             startTrip(state, position);
         }
 
-        // Update distance for ongoing trip
+        // Update ongoing trip with latest position
         if (state.hasActiveTrip()) {
             stateManager.updateDistance(state, position);
+            // Update trip's end position to track latest location
+            AFTrip trip = state.getCurrentTrip();
+            if (trip != null) {
+                trip.setEndPositionId(position.getId());
+            }
         }
 
         // Check for trip end
@@ -89,11 +93,12 @@ public class RealtimeTripDetectionHandler extends BasePositionHandler {
     }
 
     private void startTrip(RealtimeTripState state, Position position) throws StorageException {
-        // Create new trip record
+        // Create new trip record in memory (not persisted yet)
         AFTrip trip = new AFTrip();
         trip.setDeviceId(position.getDeviceId());
         trip.setStartTime(position.getFixTime());
         trip.setStartPositionId(position.getId());
+        trip.setDistance(0.0); // Initialize distance
 
         // Get user ID from device if available
         var device = cacheManager.getObject(org.traccar.model.Device.class, position.getDeviceId());
@@ -106,45 +111,26 @@ public class RealtimeTripDetectionHandler extends BasePositionHandler {
             trip.setStartOdometer(position.getDouble(Position.KEY_ODOMETER));
         }
 
-        // Save trip to database
-        long tripId = storage.addObject(trip, new Request(new Columns.Exclude("id")));
-        trip.setId(tripId);
+        // Store trip in memory (not in database yet)
+        state.startNewTrip(trip, position);
 
-        // Update state
-        state.startNewTrip(tripId, position);
-
-        LOGGER.info("Started trip {} for device {}", tripId, position.getDeviceId());
+        LOGGER.info("Started trip (in-memory) for device {}", position.getDeviceId());
 
         // Emit trip start event
         Event event = new Event(Event.TYPE_REALTIME_TRIP_START, position);
-        event.set("tripId", tripId);
         notificationManager.updateEvents(java.util.Map.of(event, position));
     }
 
     private void endTrip(RealtimeTripState state, Position position) throws StorageException {
-        Long tripId = state.getCurrentTripId();
-        if (tripId == null) {
+        AFTrip trip = state.getCurrentTrip();
+        if (trip == null) {
             return;
         }
 
         // Check if trip meets minimum requirements
         if (!stateManager.meetsMinimumRequirements(state, position)) {
-            LOGGER.debug("Trip {} for device {} does not meet minimum requirements, discarding",
-                    tripId, position.getDeviceId());
-            state.endTrip();
-
-            // Delete the trip record
-            storage.removeObject(AFTrip.class, new Request(new Condition.Equals("id", tripId)));
-            return;
-        }
-
-        // Load existing trip record
-        AFTrip trip = storage.getObject(AFTrip.class, new Request(
-                new Columns.All(),
-                new Condition.Equals("id", tripId)));
-
-        if (trip == null) {
-            LOGGER.warn("Trip {} not found for device {}", tripId, position.getDeviceId());
+            LOGGER.debug("Trip for device {} does not meet minimum requirements, discarding",
+                    position.getDeviceId());
             state.endTrip();
             return;
         }
@@ -157,21 +143,14 @@ public class RealtimeTripDetectionHandler extends BasePositionHandler {
         long duration = trip.getEndTime().getTime() - trip.getStartTime().getTime();
         trip.setDuration(duration);
 
-        // Set distance from accumulated distance
-        Double accumulatedDistance = state.getAccumulatedDistance();
-        if (accumulatedDistance != null) {
-            trip.setDistance(accumulatedDistance);
-        }
-
-        // Save updated trip
-        storage.updateObject(trip, new Request(
-                new Columns.Exclude("id", "deviceId", "startTime", "startPositionId", "userId", "startOdometer"),
-                new Condition.Equals("id", tripId)));
+        // Save trip to database (first time persistence)
+        long tripId = storage.addObject(trip, new Request(new Columns.Exclude("id")));
+        trip.setId(tripId);
 
         LOGGER.info("Ended trip {} for device {} - distance: {} m, duration: {} ms",
                 tripId, position.getDeviceId(), trip.getDistance(), duration);
 
-        // Reset state
+        // Reset state (remove from memory)
         state.endTrip();
 
         // Emit trip end event
