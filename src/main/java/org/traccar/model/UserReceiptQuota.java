@@ -1,5 +1,6 @@
 package org.traccar.model;
 
+import org.traccar.storage.QueryIgnore;
 import org.traccar.storage.StorageName;
 
 import java.util.Date;
@@ -80,6 +81,7 @@ public class UserReceiptQuota extends BaseModel {
     /**
      * 获取剩余额度
      */
+    @QueryIgnore
     public int getRemainingQuota() {
         if (maxLimit == -1) {
             return 10000; // 最大返回10000，避免无限
@@ -90,6 +92,7 @@ public class UserReceiptQuota extends BaseModel {
     /**
      * 检查是否还有额度
      */
+    @QueryIgnore
     public boolean hasQuota() {
         return maxLimit == -1 || currentUsage < maxLimit;
     }
@@ -97,6 +100,7 @@ public class UserReceiptQuota extends BaseModel {
     /**
      * 获取用户类型枚举
      */
+    @QueryIgnore
     public UserType getUserTypeEnum() {
         return userType != null ? UserType.fromCode(userType) : null;
     }

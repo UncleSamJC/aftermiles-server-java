@@ -177,63 +177,75 @@ public class UserResource extends BaseObjectResource<User> {
     @Path("trial-registration")
     @PermitAll
     @POST
-    public Response createTrialUser(TrialRegistrationRequest request) throws StorageException {
-        // 1. 验证邮箱是否已存在
-        User existingUser = storage.getObject(User.class, new org.traccar.storage.query.Request(
-            new Columns.All(),
-            new Condition.Equals("email", request.getEmail())
-        ));
-
-        if (existingUser != null) {
-            throw new SecurityException("Email already registered");
-        }
-
-        // 2. 创建用户实体
-        User user = new User();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
-        if (request.getPhone() != null) {
-            user.setPhone(request.getPhone());
-        }
-
-        // 设置试用期到期时间
-        UserType userType = UserType.TRIAL_2025;
-        user.setExpirationTime(userType.getExpirationDate());
-        user.setTemporary(true); // 标记为临时用户
-
-        // 应用默认配置
-        UserUtil.setUserDefaults(user, config);
-
-        // 3. 保存用户
-        user.setId(storage.addObject(user, new org.traccar.storage.query.Request(new Columns.Exclude("id"))));
-        storage.updateObject(user, new org.traccar.storage.query.Request(
-            new Columns.Include("hashedPassword", "salt"),
-            new Condition.Equals("id", user.getId())
-        ));
-
-        // 4. 初始化扫描配额
-        UserReceiptQuota quota = receiptQuotaManager.initializeQuota(user.getId(), userType);
-
-        // 5. 记录操作日志
-        actionLogger.create(this.request, 0, user);
-
-        // 6. 发送欢迎邮件（异步，失败不影响注册）
+    public Response createTrialUser(TrialRegistrationRequest request) {
         try {
-            sendTrialWelcomeEmail(user, userType, quota);
+            // 1. 验证邮箱是否已存在
+            User existingUser = storage.getObject(User.class, new org.traccar.storage.query.Request(
+                new Columns.All(),
+                new Condition.Equals("email", request.getEmail())
+            ));
+
+            if (existingUser != null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", "Email already registered"))
+                    .build();
+            }
+
+            // 2. 创建用户实体
+            User user = new User();
+            user.setName(request.getName());
+            user.setEmail(request.getEmail());
+            user.setPassword(request.getPassword());
+            if (request.getPhone() != null) {
+                user.setPhone(request.getPhone());
+            }
+
+            // 设置试用期到期时间
+            UserType userType = UserType.TRIAL_2025;
+            user.setExpirationTime(userType.getExpirationDate());
+            user.setTemporary(true); // 标记为临时用户
+
+            // 应用默认配置
+            UserUtil.setUserDefaults(user, config);
+
+            // 3. 保存用户
+            user.setId(storage.addObject(user, new org.traccar.storage.query.Request(new Columns.Exclude("id"))));
+            storage.updateObject(user, new org.traccar.storage.query.Request(
+                new Columns.Include("hashedPassword", "salt"),
+                new Condition.Equals("id", user.getId())
+            ));
+
+            // 4. 初始化扫描配额
+            UserReceiptQuota quota = receiptQuotaManager.initializeQuota(user.getId(), userType);
+
+            // 5. 记录操作日志
+            actionLogger.create(this.request, 0, user);
+
+            // 6. 发送欢迎邮件（异步，失败不影响注册）
+            try {
+                sendTrialWelcomeEmail(user, userType, quota);
+            } catch (Exception e) {
+                // 邮件发送失败不影响注册流程
+                // 日志已在 MailManager 中记录
+            }
+
+            // 7. 返回用户信息和配额信息
+            Map<String, Object> response = new HashMap<>();
+            response.put("user", user);
+            response.put("quota", quota);
+            response.put("message", "Trial account created successfully. You have "
+                + quota.getMaxLimit() + " receipt scans for " + userType.getValidityDays() + " days.");
+
+            return Response.ok(response).build();
+        } catch (StorageException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(Map.of("error", "Database error: " + e.getMessage()))
+                .build();
         } catch (Exception e) {
-            // 邮件发送失败不影响注册流程
-            // 日志已在 MailManager 中记录
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(Map.of("error", "Registration failed: " + e.getMessage()))
+                .build();
         }
-
-        // 7. 返回用户信息和配额信息
-        Map<String, Object> response = new HashMap<>();
-        response.put("user", user);
-        response.put("quota", quota);
-        response.put("message", "Trial account created successfully. You have "
-            + quota.getMaxLimit() + " receipt scans for " + userType.getValidityDays() + " days.");
-
-        return Response.ok(response).build();
     }
 
     /**
@@ -363,16 +375,16 @@ public class UserResource extends BaseObjectResource<User> {
         try {
             String subject = "Welcome to AfterMiles - Trial Account Activated";
             String body = String.format(
-                "Dear %s,\n\n" +
-                "Welcome to AfterMiles! Your trial account has been successfully created.\n\n" +
-                "Account Details:\n" +
-                "- User Type: %s\n" +
-                "- Validity: %d days (expires on %tF)\n" +
-                "- Receipt Scan Quota: %d scans\n\n" +
-                "You can now start using AfterMiles to manage your receipts and expenses.\n\n" +
-                "To upgrade to a paid plan for more features, please contact our support team.\n\n" +
-                "Best regards,\n" +
-                "AfterMiles Team",
+                "Dear %s,\n\n"
+                + "Welcome to AfterMiles! Your trial account has been successfully created.\n\n"
+                + "Account Details:\n"
+                + "- User Type: %s\n"
+                + "- Validity: %d days (expires on %tF)\n"
+                + "- Receipt Scan Quota: %d scans\n\n"
+                + "You can now start using AfterMiles to manage your receipts and expenses.\n\n"
+                + "To upgrade to a paid plan for more features, please contact our support team.\n\n"
+                + "Best regards,\n"
+                + "AfterMiles Team",
                 user.getName(),
                 userType.getDisplayName(),
                 userType.getValidityDays(),
@@ -394,15 +406,15 @@ public class UserResource extends BaseObjectResource<User> {
         try {
             String subject = "Account Upgraded - " + newUserType.getDisplayName();
             String body = String.format(
-                "Dear %s,\n\n" +
-                "Your AfterMiles account has been successfully upgraded!\n\n" +
-                "New Account Details:\n" +
-                "- User Type: %s\n" +
-                "- Expires on: %tF\n" +
-                "- Receipt Scan Quota: %d scans per year\n\n" +
-                "Thank you for choosing AfterMiles!\n\n" +
-                "Best regards,\n" +
-                "AfterMiles Team",
+                "Dear %s,\n\n"
+                + "Your AfterMiles account has been successfully upgraded!\n\n"
+                + "New Account Details:\n"
+                + "- User Type: %s\n"
+                + "- Expires on: %tF\n"
+                + "- Receipt Scan Quota: %d scans per year\n\n"
+                + "Thank you for choosing AfterMiles!\n\n"
+                + "Best regards,\n"
+                + "AfterMiles Team",
                 user.getName(),
                 newUserType.getDisplayName(),
                 user.getExpirationTime(),

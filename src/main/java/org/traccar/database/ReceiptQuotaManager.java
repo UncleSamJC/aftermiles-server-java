@@ -269,7 +269,7 @@ public class ReceiptQuotaManager {
      */
     private void logUsageChange(long userId, Long receiptId, String action,
                                 int changeAmount, int usageBefore, int usageAfter) {
-        // TODO: 可以实现持久化到 tcaf_user_receipt_usage_log 表
+        // NOTE: 可以实现持久化到 tcaf_user_receipt_usage_log 表
         // 目前仅记录到应用日志
         LOGGER.debug("Usage change log: userId={}, receiptId={}, action={}, change={}, before={}, after={}",
                 userId, receiptId, action, changeAmount, usageBefore, usageAfter);

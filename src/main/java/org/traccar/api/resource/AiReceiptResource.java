@@ -24,6 +24,7 @@ import org.traccar.api.BaseResource;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
 import org.traccar.database.MediaManager;
+import org.traccar.database.ReceiptQuotaManager;
 import org.traccar.helper.LogAction;
 import org.traccar.helper.MediaUploadHelper;
 import org.traccar.model.AiReceiptBatch;
@@ -72,6 +73,9 @@ public class AiReceiptResource extends BaseResource {
 
     @Inject
     private AiReceiptProcessor aiReceiptProcessor;
+
+    @Inject
+    private ReceiptQuotaManager receiptQuotaManager;
 
     @Context
     private HttpServletRequest request;
@@ -135,6 +139,32 @@ public class AiReceiptResource extends BaseResource {
             details.put("receipts", "Maximum " + maxBatchSize + " receipts allowed per batch");
             return buildErrorResponse("VALIDATION_ERROR", "Too many receipts", details);
         }
+
+        // ===== QUOTA CHECK: Check user has enough scan quota =====
+            LOGGER.info("Step 3.5: Checking receipt scan quota for user {}", getUserId());
+        try {
+            int remainingQuota = receiptQuotaManager.getRemainingQuota(getUserId());
+            int requiredQuota = receiptBodyParts.size();
+
+            LOGGER.info("User {} has {} remaining quota, requires {} for this batch",
+                    getUserId(), remainingQuota, requiredQuota);
+
+            if (remainingQuota < requiredQuota) {
+                Map<String, String> details = new HashMap<>();
+                details.put("remainingQuota", String.valueOf(remainingQuota));
+                details.put("requiredQuota", String.valueOf(requiredQuota));
+                return buildErrorResponse("QUOTA_EXCEEDED",
+                        "Insufficient scan quota. You have " + remainingQuota
+                                + " scans remaining but need " + requiredQuota + " for this batch.",
+                        details);
+            }
+                LOGGER.info("Step 3.5: Quota check passed");
+        } catch (StorageException e) {
+                LOGGER.warn("Failed to check quota for user {}: {}. Allowing operation to proceed (fail-open policy).",
+                        getUserId(), e.getMessage());
+            // Fail-open: allow operation if quota check fails
+        }
+        // ===== QUOTA CHECK END =====
 
         // Validate all receipt types and extract InputStreams
             LOGGER.info("Step 4: Validating file types and extracting streams");
@@ -236,6 +266,22 @@ public class AiReceiptResource extends BaseResource {
                 LOGGER.info("Step 7.{}: Batch item saved with id={}", i + 1, item.getId());
             itemIds.add(item.getId());
         }
+            LOGGER.info("Step 7: All {} batch items created successfully", itemIds.size());
+
+        // ===== QUOTA DEDUCTION: Deduct receipt scan quota for all uploaded receipts =====
+            LOGGER.info("Step 7.5: Deducting {} scan quota for user {}", receiptPaths.size(), getUserId());
+        try {
+            for (Long itemId : itemIds) {
+                receiptQuotaManager.incrementReceiptUsage(getUserId(), itemId);
+            }
+                LOGGER.info("Step 7.5: Successfully deducted {} scan quota for user {} (batchId={})",
+                        receiptPaths.size(), getUserId(), batch.getId());
+        } catch (StorageException e) {
+                LOGGER.error("Failed to deduct quota for user {} after creating batch {}: {}",
+                        getUserId(), batch.getId(), e.getMessage());
+            // Note: Batch is already created. This is a non-critical error (fail-open policy).
+        }
+        // ===== QUOTA DEDUCTION END =====
 
         // Submit batch to async processing queue
         aiReceiptProcessor.submitBatch(batch.getId());
@@ -251,6 +297,14 @@ public class AiReceiptResource extends BaseResource {
         data.put("totalReceipts", batch.getTotalReceipts());
         data.put("createdAt", batch.getCreatedTime().toInstant().toString());
         data.put("itemIds", itemIds);
+
+        // Add remaining quota information to response
+        try {
+            int remainingQuota = receiptQuotaManager.getRemainingQuota(getUserId());
+            data.put("remainingQuota", remainingQuota);
+        } catch (StorageException e) {
+            LOGGER.warn("Failed to get remaining quota for response: {}", e.getMessage());
+        }
 
         response.put("data", data);
         response.put("message", "Batch created successfully. Processing will begin shortly.");
