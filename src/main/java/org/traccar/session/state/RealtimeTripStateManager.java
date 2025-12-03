@@ -71,30 +71,52 @@ public class RealtimeTripStateManager {
 
         // Check if position indicates motion
         boolean isMoving = position.getBoolean(Position.KEY_MOTION);
-        boolean ignitionOn = position.getAttributes().containsKey(Position.KEY_IGNITION)
-                && position.getBoolean(Position.KEY_IGNITION);
+        boolean hasIgnition = position.getAttributes().containsKey(Position.KEY_IGNITION);
+        boolean ignitionOn = hasIgnition && position.getBoolean(Position.KEY_IGNITION);
 
         boolean ignitionRequired = config.getBoolean(Keys.REALTIME_TRIP_IGNITION_REQUIRED);
 
+        Boolean lastIgnition = state.getLastIgnitionState();
+        Boolean lastMotion = state.getLastMotionState();
+
+        // Cold start detection: first position or after server restart
+        // If device is already moving/ignition on, start trip immediately
+        if (lastIgnition == null && lastMotion == null) {
+            if (ignitionRequired) {
+                // Need ignition ON to start
+                if (ignitionOn && isMoving) {
+                    LOGGER.info("Trip start detected for device {} (cold start: ignition ON + moving)",
+                            state.getDeviceId());
+                    return true;
+                }
+            } else {
+                // Just need motion
+                if (isMoving) {
+                    LOGGER.info("Trip start detected for device {} (cold start: moving)",
+                            state.getDeviceId());
+                    return true;
+                }
+            }
+            // Not moving yet, wait for state transition
+            return false;
+        }
+
+        // Normal state transition detection
         // Trip starts when:
         // 1. Ignition turns ON (if ignition required)
         // 2. Device starts moving (if ignition not required or ignition is already ON)
         if (ignitionRequired) {
-            // Ignition-based detection
-            Boolean lastIgnition = state.getLastIgnitionState();
+            // Ignition-based detection: OFF -> ON transition
             if (lastIgnition != null && !lastIgnition && ignitionOn) {
-                // Ignition turned ON
-                LOGGER.debug("Trip start detected for device {} (ignition ON)", state.getDeviceId());
+                LOGGER.info("Trip start detected for device {} (ignition OFF -> ON)", state.getDeviceId());
                 return true;
             }
         }
 
-        // Motion-based detection
-        Boolean lastMotion = state.getLastMotionState();
+        // Motion-based detection: stopped -> moving transition
         if (lastMotion != null && !lastMotion && isMoving) {
-            // Started moving
             if (!ignitionRequired || ignitionOn) {
-                LOGGER.debug("Trip start detected for device {} (motion started)", state.getDeviceId());
+                LOGGER.info("Trip start detected for device {} (motion started)", state.getDeviceId());
                 return true;
             }
         }
@@ -103,7 +125,11 @@ public class RealtimeTripStateManager {
     }
 
     /**
-     * Update state with new position and determine if trip should end
+     * Update state with new position and determine if trip should end.
+     *
+     * Trip ends when:
+     * 1. Ignition transitions from true -> false (immediate)
+     * 2. Ignition stays true but distance=0 for more than minStopDuration (idle timeout)
      */
     public boolean shouldEndTrip(RealtimeTripState state, Position position) {
         // No active trip
@@ -111,48 +137,38 @@ public class RealtimeTripStateManager {
             return false;
         }
 
-        boolean isMoving = position.getBoolean(Position.KEY_MOTION);
-        boolean ignitionOn = position.getAttributes().containsKey(Position.KEY_IGNITION)
-                && position.getBoolean(Position.KEY_IGNITION);
+        boolean hasIgnition = position.getAttributes().containsKey(Position.KEY_IGNITION);
+        boolean ignitionOn = hasIgnition && position.getBoolean(Position.KEY_IGNITION);
+        Boolean lastIgnition = state.getLastIgnitionState();
 
+        // Condition 1: Ignition true -> false, end trip immediately
+        if (lastIgnition != null && lastIgnition && !ignitionOn) {
+            LOGGER.info("Trip end detected for device {} (ignition OFF)", state.getDeviceId());
+            return true;
+        }
+
+        // Condition 2: Ignition stays true but idle (distance=0) for too long
         long minStopDuration = config.getLong(Keys.REALTIME_TRIP_MIN_STOP_DURATION);
-        boolean ignitionRequired = config.getBoolean(Keys.REALTIME_TRIP_IGNITION_REQUIRED);
+        double distance = position.getDouble(Position.KEY_DISTANCE);
 
-        // Trip ends when:
-        // 1. Ignition OFF (if ignition required)
-        // 2. Stopped for minimum duration
+        // Consider idle if distance is 0 or very small (< 1 meter)
+        boolean isIdle = distance < 1.0;
 
-        if (ignitionRequired && !ignitionOn) {
-            // Ignition turned OFF
-            if (state.getLastStopTime() != null) {
-                long stopDuration = position.getFixTime().getTime() - state.getLastStopTime().getTime();
-                if (stopDuration >= minStopDuration) {
-                    LOGGER.debug("Trip end detected for device {} (ignition OFF + stopped {} ms)",
-                            state.getDeviceId(), stopDuration);
+        if (isIdle) {
+            if (state.getLastStopTime() == null) {
+                // Just became idle, record the time
+                state.setLastStopTime(position.getFixTime());
+            } else {
+                // Check idle duration
+                long idleDuration = position.getFixTime().getTime() - state.getLastStopTime().getTime();
+                if (idleDuration >= minStopDuration) {
+                    LOGGER.info("Trip end detected for device {} (idle for {} ms, ignition still ON)",
+                            state.getDeviceId(), idleDuration);
                     return true;
                 }
             }
-        }
-
-        // Check if stopped for minimum duration
-        if (!isMoving) {
-            if (state.getLastStopTime() == null) {
-                // Just stopped, record the time
-                state.setLastStopTime(position.getFixTime());
-            } else {
-                // Check stop duration
-                long stopDuration = position.getFixTime().getTime() - state.getLastStopTime().getTime();
-                if (stopDuration >= minStopDuration) {
-                    // If ignition not required, or ignition is OFF, end the trip
-                    if (!ignitionRequired || !ignitionOn) {
-                        LOGGER.debug("Trip end detected for device {} (stopped for {} ms)",
-                                state.getDeviceId(), stopDuration);
-                        return true;
-                    }
-                }
-            }
         } else {
-            // Moving again, reset stop time
+            // Moving again, reset idle timer
             state.setLastStopTime(null);
         }
 
@@ -226,25 +242,42 @@ public class RealtimeTripStateManager {
      * Get all active trips in memory, optionally filtered by time range, device, and user
      */
     public List<AFTrip> getActiveTrips(Date fromDate, Date toDate, Long deviceId, Long userId) {
+        LOGGER.debug("getActiveTrips called: fromDate={}, toDate={}, deviceId={}, userId={}, totalStates={}",
+                fromDate, toDate, deviceId, userId, deviceStates.size());
+
         return deviceStates.values().stream()
-                .filter(state -> state.hasActiveTrip())
+                .filter(state -> {
+                    boolean hasActive = state.hasActiveTrip();
+                    LOGGER.debug("Device {} hasActiveTrip: {}", state.getDeviceId(), hasActive);
+                    return hasActive;
+                })
                 .map(RealtimeTripState::getCurrentTrip)
                 .filter(trip -> {
                     // Filter by time range (startTime must be within range)
                     if (fromDate != null && trip.getStartTime().before(fromDate)) {
+                        LOGGER.debug("Trip filtered out: startTime {} before fromDate {}",
+                                trip.getStartTime(), fromDate);
                         return false;
                     }
                     if (toDate != null && trip.getStartTime().after(toDate)) {
+                        LOGGER.debug("Trip filtered out: startTime {} after toDate {}",
+                                trip.getStartTime(), toDate);
                         return false;
                     }
                     // Filter by deviceId
                     if (deviceId != null && trip.getDeviceId() != deviceId) {
+                        LOGGER.debug("Trip filtered out: deviceId {} != {}",
+                                trip.getDeviceId(), deviceId);
                         return false;
                     }
-                    // Filter by userId
-                    if (userId != null && !userId.equals(trip.getUserId())) {
+                    // Filter by userId - skip if trip has no userId set
+                    if (userId != null && trip.getUserId() != null && !userId.equals(trip.getUserId())) {
+                        LOGGER.debug("Trip filtered out: userId {} != {}",
+                                trip.getUserId(), userId);
                         return false;
                     }
+                    LOGGER.debug("Trip passed filters: deviceId={}, startTime={}",
+                            trip.getDeviceId(), trip.getStartTime());
                     return true;
                 })
                 .collect(Collectors.toList());

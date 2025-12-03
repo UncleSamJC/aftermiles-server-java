@@ -226,6 +226,13 @@ public final class QueryBuilder {
                     } else {
                         statement.setNull(index + 1, Types.INTEGER);
                     }
+                } else if (method.getReturnType().equals(Double.class)) {
+                    Double value = (Double) method.invoke(object);
+                    if (value != null) {
+                        setDouble(index, value);
+                    } else {
+                        statement.setNull(index + 1, Types.DOUBLE);
+                    }
                 } else {
                     setString(index, objectMapper.writeValueAsString(method.invoke(object)));
                 }

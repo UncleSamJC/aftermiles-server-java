@@ -1,178 +1,82 @@
-# Real-Time Trip Analysis System Design
-
-## Overview
-
-Implement a real-time trip analysis system that automatically segments vehicle journeys based on live GPS data from H02 protocol trackers. The system analyzes Position data in real-time using feature detection (ignition state, stop duration) to intelligently split trips, replacing the current report-based historical data segmentation approach.
+# Real-Time Trip Detection System
 
 ## Architecture
 
-### Data Flow
 ```
-H02 Protocol → Position Decoder → Processing Pipeline → RealtimeTripDetectionHandler
-                                                              ↓
-                                                        RealtimeTripStateManager
-                                                              ↓
-                                                    Database (tcaf_realtime_trips)
-                                                              ↓
-                                                         RealtimeTrip Events
+H02 Device → Protocol Decoder → Processing Pipeline → DatabaseHandler → RealtimeTripDetectionHandler
+                                                                              ↓
+                                                                    RealtimeTripStateManager (内存)
+                                                                              ↓
+                                                                    tcaf_realtime_trips (数据库)
 ```
-
-### Integration Points
-- **Handler Pipeline**: Insert `RealtimeTripDetectionHandler` after `DatabaseHandler` in `ProcessingHandler.java`
-- **State Management**: `RealtimeTripStateManager` as singleton service (Guice managed)
-- **Database**: New Liquibase changelog for `tcaf_realtime_trips` table
-- **API**: New `RealtimeTripResource` for REST endpoints
-- **Events**: Emit REALTIME_TRIP_START/REALTIME_TRIP_END events via `NotificationManager`
-
-## Data Model
-
-### Database Schema
-
-**Table: tcaf_realtime_trips**
-```sql
-- id (BIGINT, PRIMARY KEY)
-- deviceId (BIGINT, NOT NULL, FK to tc_devices)
-- userId (BIGINT, FK to tc_users)
-- startOdometer (DOUBLE, odometer reading at trip start)
-- startPositionId (BIGINT, FK to tc_positions)
-- endPositionId (BIGINT, FK to tc_positions)
-- startTime (TIMESTAMP, NOT NULL)
-- endTime (TIMESTAMP, nullable for ongoing trips)
-- distance (DOUBLE, calculated from positions)
-- duration (BIGINT, milliseconds)
-- startAddress (VARCHAR(512))
-- endAddress (VARCHAR(512))
-- attributes (VARCHAR(4000), JSON for extensibility)
-```
-
-**Indexes:**
-- deviceId + startTime (for device trip history queries)
-- startTime + endTime (for time range queries)
-- endTime IS NULL (for active trips)
-
-### Java Model
-
-**org.traccar.model.AFTrip**
-- Extends BaseModel
-- Standard getters/setters
-- Follows existing Traccar model patterns
 
 ## Core Components
 
-### 1. RealtimeTripDetectionHandler
-- **Package**: `org.traccar.handler`
-- **Extends**: `BaseDataHandler`
-- **Responsibilities**:
-  - Receive Position from pipeline
-  - Query RealtimeTripStateManager for device state
-  - Detect trip start/end conditions
-  - Create/update Trip records
-  - Emit trip events
+| 组件 | 路径 | 职责 |
+|------|------|------|
+| `RealtimeTripDetectionHandler` | `org.traccar.handler` | Pipeline 中接收 Position，检测 Trip 开始/结束 |
+| `RealtimeTripStateManager` | `org.traccar.session.state` | 管理设备状态（内存），Trip 检测算法 |
+| `RealtimeTripState` | `org.traccar.session.state` | 单个设备的状态：currentTrip, lastIgnition, lastStopTime |
+| `AFTrip` | `org.traccar.model` | Trip 数据模型，映射 `tcaf_realtime_trips` 表 |
+| `AFTripResource` | `org.traccar.api.resource` | REST API: `/api/realtimetrips` |
 
-### 2. RealtimeTripStateManager
-- **Package**: `org.traccar.session`
-- **Type**: Singleton service (@Singleton)
-- **State Storage**: `ConcurrentHashMap<Long, RealtimeTripState>` (deviceId → state)
-- **RealtimeTripState fields**:
-  - currentTripId
-  - tripStartTime
-  - lastIgnitionOn
-  - lastStopTime
-  - lastPosition
-- **Methods**:
-  - `RealtimeTripState getDeviceState(long deviceId)`
-  - `void updateState(Position position)`
-  - `boolean shouldStartTrip(RealtimeTripState state, Position position)`
-  - `boolean shouldEndTrip(RealtimeTripState state, Position position)`
+## Trip Detection Rules
 
-### 3. RealtimeTripResource
-- **Package**: `org.traccar.api.resource`
-- **Endpoints**:
-  - `GET /api/realtimetrips` - Query trips by device/time range
-  - `GET /api/realtimetrips/{id}` - Get single trip
-  - `GET /api/realtimetrips/active` - Get currently active trips
+### Trip 开始条件
 
-### 4. Storage Layer
-- **org.traccar.storage.query.Columns** - Add Trip columns
-- **DatabaseStorage** - CRUD operations for Trip model
+1. **冷启动**：首次数据或服务器重启后，如果 `ignition=true` 且 `motion=true`，立即开始
+2. **状态转换**：`ignition: false → true` 或 `motion: false → true`
 
-## Realtime Trip Detection Rules
+### Trip 结束条件
 
-### Start Conditions (any of):
-1. Ignition ON → ON transition
-2. Device changes from stopped (speed = 0) to moving (speed > threshold)
+1. **熄火**：`ignition: true → false`，**立即结束**
+2. **怠速超时**：`ignition=true` 但 `distance=0` 持续超过 3 分钟，结束
 
-### End Conditions (any of):
-1. Ignition OFF + stopped for > MIN_STOP_DURATION (default 3 minutes)
-2. Continuous stop > MIN_STOP_DURATION with ignition OFF
-3. Daily auto-split at 23:59:59 (if enabled)
+## Configuration
 
-### Configuration Keys
-Add to `org.traccar.config.Keys`:
-```
-REALTIME_TRIP_MIN_STOP_DURATION (default: 180000ms / 3 minutes)
-REALTIME_TRIP_MIN_DISTANCE (default: 100m, filter short trips)
-REALTIME_TRIP_MIN_DURATION (default: 60000ms / 1 minute)
-REALTIME_TRIP_DAILY_SPLIT (default: false)
-REALTIME_TRIP_IGNITION_REQUIRED (default: true)
+```properties
+realtimeTrip.minStopDuration=180000   # 怠速超时时间 (ms)，默认 3 分钟
+realtimeTrip.minDistance=100          # 最小有效 Trip 距离 (m)
+realtimeTrip.minDuration=60000        # 最小有效 Trip 时长 (ms)
+realtimeTrip.ignitionRequired=true    # 是否需要 ignition 信号
 ```
 
-## Event Types
+## Database Table
 
-Add to Event model:
-- `TYPE_REALTIME_TRIP_START` - "realtimeTripStart"
-- `TYPE_REALTIME_TRIP_END` - "realtimeTripEnd"
+```sql
+tcaf_realtime_trips (
+  id, deviceId, userId,
+  startTime, endTime,
+  startPositionId, endPositionId,
+  startOdometer, distance, duration,
+  startAddress, endAddress, attributes
+)
+```
 
-## Implementation TODO
+## API
 
-### Phase 1: Foundation
-- [ ] Create `AFTrip.java` model in `org.traccar.model`
-- [ ] Add Trip columns to `Columns.java`
-- [ ] Create Liquibase changelog for `tcaf_realtime_trips` table
-- [ ] Add configuration keys to `Keys.java`
-- [ ] Add TRIP_START/TRIP_END event types to `Event.java`
+- `GET /api/realtimetrips?from=2025-01-01T00:00&to=2025-01-01T23:59&deviceId=123`
+- `GET /api/realtimetrips/{id}`
 
-### Phase 2: Core Logic
-- [ ] Create `RealtimeTripState.java` class
-- [ ] Implement `RealtimeTripStateManager.java` service
-- [ ] Implement `RealtimeTripDetectionHandler.java`
-- [ ] Register handler in `ProcessingHandler.java`
-- [ ] Register service in `MainModule.java` (Guice binding)
+详见 `REALTIME_TRIPS_API.md`
 
-### Phase 3: API & Storage
-- [ ] Implement `RealtimeTripResource.java` REST endpoints
-- [ ] Add trip queries to `DatabaseStorage` or create `RealtimeTripStorage`
-- [ ] Add permissions checks (user can only see their device trips)
-- [ ] Register resource in `WebModule.java`
+## Key Files
 
-### Phase 4: Integration
-- [ ] Add trip event handling to `NotificationManager`
-- [ ] Update `EventData.java` for trip event forwarding
-- [ ] Add reverse geocoding for start/end addresses (async)
-- [ ] Handle edge cases (device offline, server restart)
+```
+src/main/java/org/traccar/
+├── handler/RealtimeTripDetectionHandler.java
+├── session/state/RealtimeTripStateManager.java
+├── session/state/RealtimeTripState.java
+├── model/AFTrip.java
+├── api/resource/AFTripResource.java
+├── config/Keys.java (REALTIME_TRIP_* 配置项)
+└── ProcessingHandler.java (Handler 注册)
 
-### Phase 5: Testing
-- [ ] Unit tests for trip detection logic
-- [ ] Test cases for edge scenarios (rapid ignition changes, etc.)
-- [ ] Integration test with H02 protocol decoder
-- [ ] Performance test with multiple devices
-
-### Phase 6: Documentation
-- [ ] API documentation for new endpoints
-- [ ] Configuration guide for trip detection parameters
-- [ ] Migration guide from report-based trips
-
-## Future Enhancements
-
-- Driver behavior analysis (harsh braking, speeding)
-- Geofence-based trip segmentation
-- Multi-day trip handling for long hauls
-- Machine learning for intelligent stop detection
-- Redis support for distributed deployment (use existing BroadcastService)
+schema/changelog-6.14.0.xml (数据库表定义)
+```
 
 ## Notes
 
-- All trip state is in-memory; acceptable to rebuild on server restart
-- Trip distance calculated from sum of position distances
-- Start/end addresses populated asynchronously via GeocoderHandler
-- Maintains backward compatibility with existing reports
+- Trip 状态保存在内存中，服务器重启后通过冷启动检测恢复
+- Trip 数据只在结束时写入数据库，进行中的 Trip 存在内存
+- 不满足最小距离/时长要求的 Trip 会被丢弃

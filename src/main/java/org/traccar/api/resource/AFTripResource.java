@@ -19,11 +19,14 @@ import org.traccar.api.BaseObjectResource;
 import org.traccar.helper.LogAction;
 import org.traccar.model.AFTrip;
 import org.traccar.model.Device;
+import org.traccar.model.Position;
 import org.traccar.session.state.RealtimeTripStateManager;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Request;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,6 +56,7 @@ import java.util.Map;
 @Consumes(MediaType.APPLICATION_JSON)
 public class AFTripResource extends BaseObjectResource<AFTrip> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AFTripResource.class);
     private static final DateTimeFormatter DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
     @Inject
@@ -234,6 +238,34 @@ public class AFTripResource extends BaseObjectResource<AFTrip> {
         tripData.put("duration", trip.getDuration());
         tripData.put("startAddress", trip.getStartAddress());
         tripData.put("endAddress", trip.getEndAddress());
+
+        // Get start position lat/lon
+        if (trip.getStartPositionId() != null && trip.getStartPositionId() > 0) {
+            try {
+                Position startPos = storage.getObject(Position.class, new Request(
+                        new Columns.All(), new Condition.Equals("id", trip.getStartPositionId())));
+                if (startPos != null) {
+                    tripData.put("startLat", startPos.getLatitude());
+                    tripData.put("startLon", startPos.getLongitude());
+                }
+            } catch (StorageException e) {
+                LOGGER.warn("Failed to get start position for trip {}", trip.getId(), e);
+            }
+        }
+
+        // Get end position lat/lon
+        if (trip.getEndPositionId() != null && trip.getEndPositionId() > 0) {
+            try {
+                Position endPos = storage.getObject(Position.class, new Request(
+                        new Columns.All(), new Condition.Equals("id", trip.getEndPositionId())));
+                if (endPos != null) {
+                    tripData.put("endLat", endPos.getLatitude());
+                    tripData.put("endLon", endPos.getLongitude());
+                }
+            } catch (StorageException e) {
+                LOGGER.warn("Failed to get end position for trip {}", trip.getId(), e);
+            }
+        }
 
         // Calculate status
         String status = trip.getEndTime() == null ? "active" : "completed";

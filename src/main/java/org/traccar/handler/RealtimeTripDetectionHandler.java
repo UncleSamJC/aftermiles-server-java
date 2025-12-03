@@ -100,10 +100,11 @@ public class RealtimeTripDetectionHandler extends BasePositionHandler {
         trip.setStartPositionId(position.getId());
         trip.setDistance(0.0); // Initialize distance
 
-        // Get user ID from device if available
-        var device = cacheManager.getObject(org.traccar.model.Device.class, position.getDeviceId());
-        if (device != null && device.getAttributes().containsKey("userId")) {
-            trip.setUserId((Long) device.getAttributes().get("userId"));
+        // Get user ID from tc_user_device relationship
+        var deviceUsers = cacheManager.getDeviceObjects(position.getDeviceId(), org.traccar.model.User.class);
+        if (!deviceUsers.isEmpty()) {
+            trip.setUserId(deviceUsers.iterator().next().getId());
+            LOGGER.debug("Trip userId set to {} for device {}", trip.getUserId(), position.getDeviceId());
         }
 
         // Set start odometer
@@ -111,10 +112,15 @@ public class RealtimeTripDetectionHandler extends BasePositionHandler {
             trip.setStartOdometer(position.getDouble(Position.KEY_ODOMETER));
         }
 
+        // Set start address from position
+        if (position.getAddress() != null) {
+            trip.setStartAddress(position.getAddress());
+        }
+
         // Store trip in memory (not in database yet)
         state.startNewTrip(trip, position);
 
-        LOGGER.info("Started trip (in-memory) for device {}", position.getDeviceId());
+        LOGGER.info("Started trip (in-memory) for device {}, userId={}", position.getDeviceId(), trip.getUserId());
 
         // Emit trip start event
         Event event = new Event(Event.TYPE_REALTIME_TRIP_START, position);
@@ -138,6 +144,11 @@ public class RealtimeTripDetectionHandler extends BasePositionHandler {
         // Update trip with end information
         trip.setEndTime(position.getFixTime());
         trip.setEndPositionId(position.getId());
+
+        // Set end address from position
+        if (position.getAddress() != null) {
+            trip.setEndAddress(position.getAddress());
+        }
 
         // Calculate duration (milliseconds)
         long duration = trip.getEndTime().getTime() - trip.getStartTime().getTime();
